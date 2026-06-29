@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Saint of the Day — Daily devotion for every day of the year</title>
+<meta name="description" content="Discover the saint, feast, or holy day for every day of the year. Beautiful daily devotional — €1 per month, 7 days free.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+SC:wght@400;600&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=EB+Garamond:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:        #2e2417;
+    --parchment:  #f5edd8;
+    --parchment2: #ede0c0;
+    --gold:       #c8a24a;
+    --gold-light: #e2c97e;
+    --crimson:    #8b1a1a;
+    --moss:       #4a5240;
+    --indigo:     #1e2a4a;
+    --indigo-mid: #2d3f6e;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'EB Garamond', serif;
+    background: var(--indigo);
+    color: var(--parchment);
+    min-height: 100vh;
+  }
+
+  /* ── NAV ── */
+  nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 40px;
+    border-bottom: 1px solid rgba(200,162,74,0.2);
+    position: sticky;
+    top: 0;
+    background: var(--indigo);
+    z-index: 100;
+  }
+  .nav-brand {
+    font-family: 'Cormorant SC', serif;
+    font-size: 16px;
+    letter-spacing: 0.1em;
+    color: var(--gold);
+  }
+  .nav-access {
+    font-family:'EB Garamond', serif;
+    font-size:15px;
+    font-style:italic;
+    color:rgba(245,237,216,0.5);
+    text-decoration:none;
+    margin-right:16px;
+    transition:color 0.2s;
+  }
+  .nav-access:hover { color:var(--gold); }
+  .nav-cta {
+    background: var(--gold);
+    color: var(--ink);
+    border: none;
+    padding: 9px 22px;
+    border-radius: 3px;
+    font-family: 'Cormorant SC', serif;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+  .nav-cta:hover { background: var(--gold-light); }
+
+  /* ── HERO ── */
+  .hero {
+    text-align: center;
+    padding: 80px 24px 60px;
+    max-width: 700px;
+    margin: 0 auto;
+  }
+  .hero-eyebrow {
+    font-family: 'Cormorant SC', serif;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    color: var(--gold);
+    margin-bottom: 28px;
+  }
+  .hero-title {
+    font-family: 'Cormorant SC', serif;
+    font-size: clamp(38px, 8vw, 72px);
+    font-weight: 600;
+    line-height: 1.1;
+    color: var(--parchment);
+    margin-bottom: 24px;
+  }
+  .hero-title span { color: var(--gold); }
+  .hero-subtitle {
+    font-size: 20px;
+    line-height: 1.6;
+    color: rgba(245,237,216,0.8);
+    max-width: 520px;
+    margin: 0 auto 40px;
+    font-style: italic;
+  }
+  .hero-cta-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .btn-primary {
+    display: inline-block;
+    background: var(--gold);
+    color: var(--ink);
+    border: none;
+    padding: 16px 40px;
+    border-radius: 3px;
+    font-family: 'Cormorant SC', serif;
+    font-size: 17px;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.15s;
+  }
+  .btn-primary:hover { background: var(--gold-light); transform: translateY(-1px); }
+  .hero-price-note {
+    font-size: 14px;
+    color: rgba(245,237,216,0.55);
+    font-style: italic;
+  }
+
+  /* ── DIVIDER ── */
+  .divider {
+    text-align: center;
+    color: var(--gold);
+    opacity: 0.4;
+    font-size: 20px;
+    letter-spacing: 12px;
+    margin: 0;
+    padding: 8px 0;
+  }
+
+  /* ── CARD PREVIEW ── */
+  .preview-section {
+    padding: 60px 24px;
+    display: flex;
+    justify-content: center;
+  }
+  .card-preview {
+    background: var(--parchment);
+    color: var(--ink);
+    border-radius: 6px;
+    width: 320px;
+    padding: 36px 28px 28px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(200,162,74,0.3);
+    text-align: center;
+    position: relative;
+    font-family: 'EB Garamond', serif;
+  }
+  .card-preview::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 60%; height: 3px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+  .preview-eyebrow {
+    font-family: 'Cormorant SC', serif;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--crimson);
+    margin-bottom: 4px;
+  }
+  .preview-date {
+    font-family: 'Cormorant SC', serif;
+    font-size: 42px;
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1;
+    margin-bottom: 20px;
+  }
+  .preview-medallion {
+    width: 88px; height: 88px;
+    border-radius: 50%;
+    background: var(--crimson);
+    margin: 0 auto 18px;
+    border: 3px solid var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Cormorant SC', serif;
+    font-size: 38px;
+    color: var(--gold-light);
+    box-shadow: 0 2px 12px rgba(139,26,26,0.4);
+  }
+  .preview-name {
+    font-family: 'Cormorant SC', serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .preview-title {
+    font-style: italic;
+    font-size: 13px;
+    color: var(--moss);
+    margin-bottom: 4px;
+  }
+  .preview-born {
+    font-family: 'Cormorant SC', serif;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--moss);
+    opacity: 0.75;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+  }
+  .preview-quote {
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--ink);
+    font-style: italic;
+    border-top: 1px solid rgba(46,36,23,0.15);
+    padding-top: 14px;
+  }
+  .preview-lock {
+    position: absolute;
+    bottom: -16px; left: 50%;
+    transform: translateX(-50%);
+    background: var(--indigo);
+    color: var(--gold);
+    border: 1px solid rgba(200,162,74,0.35);
+    border-radius: 20px;
+    padding: 6px 18px;
+    font-family: 'Cormorant SC', serif;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+  }
+
+  /* ── FEATURES ── */
+  .features-section {
+    padding: 80px 24px 60px;
+    max-width: 860px;
+    margin: 0 auto;
+  }
+  .section-label {
+    font-family: 'Cormorant SC', serif;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--gold);
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 32px;
+  }
+  .feature {
+    border-left: 2px solid rgba(200,162,74,0.3);
+    padding-left: 20px;
+  }
+  .feature-icon {
+    font-size: 22px;
+    margin-bottom: 10px;
+  }
+  .feature-title {
+    font-family: 'Cormorant SC', serif;
+    font-size: 16px;
+    color: var(--gold-light);
+    margin-bottom: 8px;
+  }
+  .feature-desc {
+    font-size: 15px;
+    line-height: 1.6;
+    color: rgba(245,237,216,0.7);
+  }
+
+  /* ── QUOTE ── */
+  .quote-section {
+    padding: 60px 24px;
+    text-align: center;
+    max-width: 600px;
+    margin: 0 auto;
+    border-top: 1px solid rgba(200,162,74,0.15);
+    border-bottom: 1px solid rgba(200,162,74,0.15);
+  }
+  .big-quote-mark {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 80px;
+    line-height: 0.5;
+    color: var(--gold);
+    opacity: 0.3;
+    display: block;
+    margin-bottom: 20px;
+  }
+  .big-quote-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-style: italic;
+    line-height: 1.55;
+    color: var(--parchment);
+    margin-bottom: 16px;
+  }
+  .big-quote-attr {
+    font-family: 'Cormorant SC', serif;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    color: var(--gold);
+  }
+
+  /* ── PRICING ── */
+  .pricing-section {
+    padding: 80px 24px;
+    text-align: center;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  .pricing-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(200,162,74,0.3);
+    border-radius: 8px;
+    padding: 44px 36px;
+    position: relative;
+  }
+  .pricing-badge {
+    position: absolute;
+    top: -14px; left: 50%;
+    transform: translateX(-50%);
+    background: var(--crimson);
+    color: var(--parchment);
+    font-family: 'Cormorant SC', serif;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    padding: 5px 18px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .pricing-amount {
+    font-family: 'Cormorant SC', serif;
+    font-size: 64px;
+    font-weight: 600;
+    color: var(--gold);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .pricing-period {
+    font-size: 16px;
+    color: rgba(245,237,216,0.55);
+    margin-bottom: 28px;
+    font-style: italic;
+  }
+  .pricing-features {
+    list-style: none;
+    text-align: left;
+    margin-bottom: 32px;
+  }
+  .pricing-features li {
+    font-size: 15px;
+    color: rgba(245,237,216,0.8);
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(200,162,74,0.1);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .pricing-features li::before {
+    content: '✠';
+    color: var(--gold);
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+  .pricing-note {
+    font-size: 13px;
+    color: rgba(245,237,216,0.4);
+    margin-top: 16px;
+    font-style: italic;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    padding: 40px 24px;
+    border-top: 1px solid rgba(200,162,74,0.1);
+    font-size: 13px;
+    color: rgba(245,237,216,0.3);
+    font-style: italic;
+  }
+
+  /* ── MOBILE ── */
+  @media (max-width: 600px) {
+    nav { padding: 16px 20px; }
+    .hero { padding: 60px 20px 40px; }
+    .features-section { padding: 60px 20px 40px; }
+    .pricing-card { padding: 44px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">✠ Saint of the Day</div>
+  <a class="nav-access" href="/access.html">I have a key</a>
+  <a class="nav-cta" href="https://bjassist.lemonsqueezy.com/checkout/buy/6c561734-51ad-4b23-bdc4-514c7da16fee" id="navCta">Start free trial</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <p class="hero-eyebrow">✠ &nbsp; A daily devotional &nbsp; ✠</p>
+  <h1 class="hero-title">Every day,<br><span>a saint.</span></h1>
+  <p class="hero-subtitle">365 days of saints, feasts, and holy days — each with a portrait, a quote or reflection, and their story. Open it each morning the way you'd open a breviary.</p>
+  <div class="hero-cta-group">
+    <a class="btn-primary" href="https://bjassist.lemonsqueezy.com/checkout/buy/6c561734-51ad-4b23-bdc4-514c7da16fee" id="heroCta">Try free for 7 days</a>
+    <p class="hero-price-note">Then €1 / month &nbsp;·&nbsp; Cancel any time</p>
+  </div>
+</section>
+
+<div class="divider">· · ·</div>
+
+<!-- CARD PREVIEW -->
+<section class="preview-section">
+  <div class="card-preview" id="previewCard">
+    <p class="preview-eyebrow" id="previewWeekday">Thursday</p>
+    <h2 class="preview-date" id="previewDate">Jun 19</h2>
+    <div class="preview-medallion" id="previewMedallion">R</div>
+    <h3 class="preview-name" id="previewName">Saint Romuald</h3>
+    <p class="preview-title" id="previewTitle">Abbot</p>
+    <p class="preview-born" id="previewBorn">Born c. 951</p>
+    <p class="preview-quote" id="previewQuote">"An Italian nobleman who founded the Camaldolese, combining solitude with community — a hermit order still flourishing today."</p>
+    <div class="preview-lock">🔒 Subscribe to unlock all 365 days</div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features-section">
+  <p class="section-label">✠ &nbsp; What you get &nbsp; ✠</p>
+  <div class="features-grid">
+    <div class="feature">
+      <div class="feature-icon">📅</div>
+      <h3 class="feature-title">Every day of the year</h3>
+      <p class="feature-desc">All 365 days covered — Catholic, Orthodox, and universal holy days. No blank days.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🖼</div>
+      <h3 class="feature-title">Real portraits</h3>
+      <p class="feature-desc">Where one exists, a real historical portrait is shown. Otherwise, a letter medallion in the app's illuminated-manuscript style.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">📖</div>
+      <h3 class="feature-title">Genuine quotes</h3>
+      <p class="feature-desc">Only documented sayings are used — no invented quotes. Where no quote survives, an honest historical reflection takes its place.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">✍️</div>
+      <h3 class="feature-title">Birth year &amp; biography</h3>
+      <p class="feature-desc">Each entry includes who they were, when they lived, and why the Church remembers them today.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🗓</div>
+      <h3 class="feature-title">Jump to any date</h3>
+      <p class="feature-desc">Browse by month and day — useful for name days, feast days of patron saints, or planning a liturgical year.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">📱</div>
+      <h3 class="feature-title">Works on any device</h3>
+      <p class="feature-desc">Opens in your browser — phone, tablet, or desktop. No app to install.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PULL QUOTE -->
+<section class="quote-section">
+  <span class="big-quote-mark">"</span>
+  <p class="big-quote-text">The glory of God is a human being fully alive.</p>
+  <p class="big-quote-attr">— Saint Irenaeus &nbsp;·&nbsp; Bishop, Martyr &amp; Doctor of the Church &nbsp;·&nbsp; June 28</p>
+</section>
+
+<!-- PRICING -->
+<section class="pricing-section">
+  <div class="pricing-card">
+    <div class="pricing-badge">✠ &nbsp; 7 days free &nbsp; ✠</div>
+    <div class="pricing-amount">€1</div>
+    <p class="pricing-period">per month after your free trial</p>
+    <ul class="pricing-features">
+      <li>All 365 saints &amp; feast days</li>
+      <li>Historical portraits from Wikipedia</li>
+      <li>Genuine quotes &amp; biographies</li>
+      <li>Works on phone, tablet &amp; desktop</li>
+      <li>Cancel any time — no questions asked</li>
+    </ul>
+    <a class="btn-primary" href="https://bjassist.lemonsqueezy.com/checkout/buy/6c561734-51ad-4b23-bdc4-514c7da16fee" style="width:100%;display:block;" id="pricingCta">
+      Start your free 7 days
+    </a>
+    <p class="pricing-note">Enter your card today, charged nothing until day 8.</p>
+    <a href="/access.html" style="display:block;margin-top:18px;font-family:'EB Garamond',serif;font-size:15px;font-style:italic;color:rgba(245,237,216,0.4);text-decoration:none;text-align:center;transition:color 0.2s;" onmouseover="this.style.color='#c8a24a'" onmouseout="this.style.color='rgba(245,237,216,0.4)'">
+      Already subscribed? Open the app →
+    </a>
+  </div>
+</section>
+
+<footer>
+  <p>✠ &nbsp; Saint of the Day &nbsp; ✠</p>
+  <p style="margin-top:8px;">Secure payments by Lemon Squeezy &nbsp;·&nbsp; <a href="mailto:your@email.com" style="color:inherit;">Contact</a></p>
+</footer>
+
+<script>
+// Show today's saint in the preview card
+const PREVIEW_SAINTS = {
+  "01-01":{name:"Mary, Mother of God",title:"Solemnity",born:null,text:"The Church's oldest Marian feast, opening the new year with a prayer for peace.",initial:"M"},
+  "01-17":{name:"Saint Anthony, Abbot",title:"Father of Monasticism",born:"c. 251",text:"I no longer fear God — I love Him.",initial:"A"},
+  "02-14":{name:"Saints Cyril and Methodius",title:"Apostles to the Slavs",born:"827 (Cyril)",text:"Devised a Slavic alphabet to bring the Gospel to peoples who had no written language.",initial:"C"},
+  "03-17":{name:"Saint Patrick",title:"Bishop",born:"c. 385",text:"Patron of Ireland, enslaved in his youth, who returned as a missionary bishop.",initial:"P"},
+  "04-23":{name:"Saint George",title:"Martyr",born:"c. 280",text:"A Roman soldier who died for his faith — the dragon-slaying came centuries later.",initial:"G"},
+  "05-15":{name:"Saint Isidore the Farmer",title:"Layman",born:"c. 1070",text:"A farm labourer whose angels reportedly finished his ploughing when prayer made him late.",initial:"I"},
+  "06-13":{name:"Saint Anthony of Padua",title:"Priest and Doctor",born:"1195",text:"If you seek miracles, look where mercy, love, and piety have been.",initial:"A"},
+  "06-19":{name:"Saint Romuald",title:"Abbot",born:"c. 951",text:"An Italian nobleman who founded the Camaldolese, combining solitude with community.",initial:"R"},
+  "07-25":{name:"Saint James",title:"Apostle",born:"1st century",text:"The first apostle to be martyred — his shrine at Santiago de Compostela drew pilgrims from across medieval Europe.",initial:"J"},
+  "08-15":{name:"The Assumption of the Blessed Virgin Mary",title:"Solemnity",born:null,text:"My soul magnifies the Lord, and my spirit rejoices in God my Savior.",initial:"M"},
+  "09-29":{name:"Saints Michael, Gabriel and Raphael",title:"Archangels",born:null,text:"The three named angels of Scripture — warrior, messenger, and healer.",initial:"M"},
+  "10-04":{name:"Saint Francis of Assisi",title:"Founder of the Franciscans",born:"1181",text:"A wealthy merchant's son who renounced everything to live in poverty and joy.",initial:"F"},
+  "11-01":{name:"All Saints",title:"Solemnity",born:null,text:"Blessed are the pure in heart, for they shall see God.",initial:"A"},
+  "11-11":{name:"Saint Martin of Tours",title:"Bishop",born:"c. 316",text:"A soldier who cut his cloak in half for a beggar — and dreamed that night the beggar was Christ.",initial:"M"},
+  "12-25":{name:"The Nativity of the Lord",title:"Solemnity",born:null,text:"The Word became flesh and made his dwelling among us.",initial:"N"},
+  "12-26":{name:"Saint Stephen",title:"First Martyr",born:"1st century",text:"Christianity's first martyr — he forgave his killers as he died.",initial:"S"},
+};
+
+function todayKey(){
+  const d = new Date();
+  return String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function todayFallback(){
+  return {name:"Saint of the Day",title:"Daily Devotional",born:null,
+    text:"Open each morning to discover who the Church remembers today.",initial:"✠"};
+}
+
+const key = todayKey();
+const entry = PREVIEW_SAINTS[key] || todayFallback();
+
+const wdFmt = new Intl.DateTimeFormat('en-US',{weekday:'long'});
+const dtFmt = new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric'});
+const now = new Date();
+
+document.getElementById('previewWeekday').textContent = wdFmt.format(now);
+document.getElementById('previewDate').textContent = dtFmt.format(now);
+document.getElementById('previewMedallion').textContent = entry.initial;
+document.getElementById('previewName').textContent = entry.name;
+document.getElementById('previewTitle').textContent = entry.title;
+document.getElementById('previewBorn').textContent = entry.born ? 'Born ' + entry.born : '';
+document.getElementById('previewQuote').textContent = '\u201c' + entry.text + '\u201d';
+
+// ── Replace https://bjassist.lemonsqueezy.com/checkout/buy/6c561734-51ad-4b23-bdc4-514c7da16fee with your actual Lemon Squeezy checkout link ──
+// (see README for how to get this)
+const LS_URL = 'https://bjassist.lemonsqueezy.com/checkout/buy/6c561734-51ad-4b23-bdc4-514c7da16fee';
+document.getElementById('navCta').href = LS_URL;
+document.getElementById('heroCta').href = LS_URL;
+document.getElementById('pricingCta').href = LS_URL;
+</script>
+</body>
+</html>
