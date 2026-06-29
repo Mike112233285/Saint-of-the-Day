@@ -50,6 +50,16 @@
     letter-spacing: 0.1em;
     color: var(--gold);
   }
+  .nav-access {
+    font-family:'EB Garamond', serif;
+    font-size:15px;
+    font-style:italic;
+    color:rgba(245,237,216,0.5);
+    text-decoration:none;
+    margin-right:16px;
+    transition:color 0.2s;
+  }
+  .nav-access:hover { color:var(--gold); }
   .nav-cta {
     background: var(--gold);
     color: var(--ink);
@@ -396,6 +406,7 @@
 
 <nav>
   <div class="nav-brand">✠ Saint of the Day</div>
+  <a class="nav-access" href="/access.html">I have a key</a>
   <a class="nav-cta" href="https://bjassist.lemonsqueezy.com/checkout/buy/6c561734-51ad-4b23-bdc4-514c7da16fee" id="navCta">Start free trial</a>
 </nav>
 
@@ -487,6 +498,9 @@
       Start your free 7 days
     </a>
     <p class="pricing-note">Enter your card today, charged nothing until day 8.</p>
+    <a href="/access.html" style="display:block;margin-top:18px;font-family:'EB Garamond',serif;font-size:15px;font-style:italic;color:rgba(245,237,216,0.4);text-decoration:none;text-align:center;transition:color 0.2s;" onmouseover="this.style.color='#c8a24a'" onmouseout="this.style.color='rgba(245,237,216,0.4)'">
+      Already subscribed? Open the app →
+    </a>
   </div>
 </section>
 
