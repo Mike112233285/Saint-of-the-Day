@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+// ── Subscription gate ──────────────────────────────────────────────────────
+// Runs before anything renders. If no valid token, sends to access page.
+(async function(){
+  const token = sessionStorage.getItem('sotd_token');
+  if (!token) { window.location.replace('/access.html'); return; }
+  try {
+    const res  = await fetch('/api/verify-token?token=' + encodeURIComponent(token));
+    const data = await res.json();
+    if (!data.valid) {
+      sessionStorage.removeItem('sotd_token');
+      window.location.replace('/access.html');
+    }
+  } catch(e) {
+    // Network error — allow offline use if token exists locally
+    // (remove this catch block if you want strict online-only enforcement)
+  }
+})();
+// ──────────────────────────────────────────────────────────────────────────
+</script>
+<title>Saint of the Day</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+SC:wght@600;700&family=Cormorant:ital,wght@0,500;0,600;1,500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --indigo: #1B2238;
+    --indigo-deep: #11152A;
+    --parchment: #F1E6CB;
+    --parchment-dim: #E7D9B6;
+    --gold: #C8A24A;
+    --gold-bright: #E3C275;
+    --burgundy: #7A1F2B;
+    --ink: #2E2417;
+    --moss: #56684B;
+  }
+
+  *{ box-sizing: border-box; }
+
+  html,body{
+    margin:0;
+    min-height:100vh;
+    background: radial-gradient(ellipse at 50% -10%, #2A3354 0%, var(--indigo) 45%, var(--indigo-deep) 100%);
+    font-family: 'EB Garamond', serif;
+    color: var(--parchment);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding: 32px 16px 56px;
+  }
+
+  .stage{
+    width:100%;
+    max-width:430px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+
+  .app-label{
+    font-family:'Cormorant SC', serif;
+    letter-spacing:0.22em;
+    font-size:12.5px;
+    color: var(--gold-bright);
+    text-transform:uppercase;
+    margin-bottom:18px;
+    opacity:0.85;
+  }
+
+  /* ---- ring binding ---- */
+  .rings{
+    display:flex;
+    gap:34px;
+    margin-bottom:-13px;
+    z-index:3;
+  }
+  .rings span{
+    width:18px;
+    height:18px;
+    border-radius:50%;
+    background: var(--indigo-deep);
+    box-shadow:
+      inset 0 2px 3px rgba(0,0,0,0.55),
+      0 1px 0 rgba(241,230,202,0.15);
+  }
+
+  /* ---- card ---- */
+  .card-wrap{
+    position:relative;
+    width:100%;
+    perspective: 1400px;
+  }
+
+  .card{
+    position:relative;
+    width:100%;
+    background: var(--parchment);
+    color: var(--ink);
+    border-radius: 6px 6px 2px 2px;
+    padding: 34px 30px 26px;
+    box-shadow:
+      0 22px 50px -10px rgba(0,0,0,0.55),
+      0 2px 0 rgba(255,255,255,0.4) inset;
+    text-align:center;
+    transform-origin: top center;
+    backface-visibility:hidden;
+  }
+
+  .card.turning{
+    animation: leaf-turn 0.62s cubic-bezier(.4,0,.2,1);
+  }
+  @media (prefers-reduced-motion: reduce){
+    .card.turning{ animation:none; }
+  }
+  @keyframes leaf-turn{
+    0%   { transform: rotateX(0deg); opacity:1; }
+    48%  { transform: rotateX(-92deg); opacity:0.25; }
+    52%  { transform: rotateX(92deg); opacity:0.25; }
+    100% { transform: rotateX(0deg); opacity:1; }
+  }
+
+  .eyebrow{
+    font-family:'Cormorant SC', serif;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    font-size:13px;
+    color: var(--burgundy);
+    margin:0 0 2px;
+  }
+  .big-date{
+    font-family:'Cormorant', serif;
+    font-weight:600;
+    font-size:42px;
+    line-height:1;
+    margin:0 0 18px;
+    color: var(--ink);
+  }
+  .big-date sup{
+    font-size:18px;
+    top:-0.9em;
+  }
+
+  /* ---- medallion ---- */
+  .medallion-frame{
+    width:128px;
+    height:128px;
+    margin:0 auto 18px;
+    border-radius:50%;
+    background: conic-gradient(from 180deg, var(--gold), #fff6dc, var(--gold), var(--gold-bright), var(--gold));
+    padding:5px;
+    box-shadow: 0 8px 18px -6px rgba(0,0,0,0.45);
+    position:relative;
+  }
+  .medallion-frame::after{
+    content:"";
+    position:absolute;
+    inset:-9px;
+    border-radius:50%;
+    border:1px solid rgba(200,162,74,0.55);
+    animation: glow 4.5s ease-in-out infinite;
+  }
+  @keyframes glow{
+    0%,100%{ opacity:0.45; }
+    50%{ opacity:0.9; }
+  }
+  .medallion{
+    width:100%;
+    height:100%;
+    border-radius:50%;
+    overflow:hidden;
+    background: var(--burgundy);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .medallion img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    object-position: top center;
+    display:block;
+  }
+  .medallion .fallback-initial{
+    font-family:'Cormorant SC', serif;
+    font-size:54px;
+    color: var(--gold-bright);
+    font-weight:700;
+  }
+
+  .saint-name{
+    font-family:'Cormorant', serif;
+    font-weight:600;
+    font-size:30px;
+    line-height:1.15;
+    margin: 2px 0 4px;
+    color: var(--ink);
+  }
+  .saint-title{
+    font-family:'EB Garamond', serif;
+    font-style:italic;
+    font-size:15px;
+    color: var(--moss);
+    margin:0 0 6px;
+  }
+  .saint-born{
+    font-family:'Cormorant SC', serif;
+    letter-spacing:0.04em;
+    font-size:12px;
+    color: var(--moss);
+    opacity:0.85;
+    margin:0 0 18px;
+    text-transform:uppercase;
+  }
+  .bio-block{
+    text-align:left;
+    margin-top:14px;
+    padding-top:12px;
+    border-top:1px solid rgba(46,36,23,0.14);
+  }
+  .bio-text{
+    font-family:'EB Garamond', serif;
+    font-size:14.5px;
+    line-height:1.55;
+    color: var(--ink);
+    opacity:0.88;
+    margin:0;
+  }
+
+  .quote-block{
+    position:relative;
+    margin: 0 4px 6px;
+    padding: 4px 6px 0;
+  }
+  .quote-mark{
+    font-family:'Cormorant', serif;
+    font-size:40px;
+    color: var(--gold);
+    line-height:0.4;
+    display:block;
+    opacity:0.8;
+  }
+  .quote-text{
+    font-family:'Cormorant', serif;
+    font-style:italic;
+    font-weight:500;
+    font-size:20px;
+    line-height:1.4;
+    color: var(--burgundy);
+    margin: 0 0 8px;
+  }
+  .reflection-text{
+    font-family:'EB Garamond', serif;
+    font-size:16.5px;
+    line-height:1.55;
+    color: var(--ink);
+    margin: 4px 0 10px;
+  }
+  .attribution{
+    font-family:'Cormorant SC', serif;
+    letter-spacing:0.06em;
+    font-size:13px;
+    color: var(--moss);
+  }
+  .source-note{
+    font-size:12px;
+    color: var(--moss);
+    opacity:0.75;
+    margin-top:2px;
+    font-style:italic;
+  }
+  .companion-note{
+    font-size:12.5px;
+    color: var(--ink);
+    opacity:0.8;
+    margin-top:12px;
+    padding-top:10px;
+    border-top:1px solid rgba(122,31,43,0.18);
+    line-height:1.4;
+  }
+
+  /* perforated tear edge under card */
+  .perf{
+    width:100%;
+    height:13px;
+    margin-top:-2px;
+    background-image:
+      linear-gradient(135deg, transparent 50%, var(--parchment) 50%),
+      linear-gradient(45deg, var(--parchment) 50%, transparent 50%);
+    background-size: 17px 17px, 17px 17px;
+    background-position: 0 0, 8.5px 0;
+    filter: drop-shadow(0 6px 8px rgba(0,0,0,0.35));
+  }
+
+  /* ---- controls ---- */
+  .controls{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    width:100%;
+    margin-top:24px;
+    gap:10px;
+  }
+  .nav-btn{
+    background:transparent;
+    border:1px solid rgba(200,162,74,0.45);
+    color: var(--gold-bright);
+    font-family:'Cormorant SC', serif;
+    letter-spacing:0.08em;
+    font-size:13px;
+    padding:9px 14px;
+    border-radius:30px;
+    cursor:pointer;
+    transition: background 0.2s, transform 0.15s;
+    text-transform:uppercase;
+    white-space:nowrap;
+  }
+  .nav-btn:hover{ background: rgba(200,162,74,0.12); }
+  .nav-btn:active{ transform: scale(0.96); }
+  .nav-btn:focus-visible{ outline:2px solid var(--gold-bright); outline-offset:2px; }
+
+  .today-btn{
+    background: var(--burgundy);
+    border:1px solid var(--burgundy);
+    color: var(--parchment);
+    font-family:'Cormorant SC', serif;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    font-size:13px;
+    padding:9px 16px;
+    border-radius:30px;
+    cursor:pointer;
+    transition: filter 0.2s, transform 0.15s;
+  }
+  .today-btn:hover{ filter:brightness(1.15); }
+  .today-btn:active{ transform: scale(0.96); }
+  .today-btn:focus-visible{ outline:2px solid var(--gold-bright); outline-offset:2px; }
+
+  .jump-row{
+    margin-top:16px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:13px;
+    color: rgba(241,230,202,0.65);
+  }
+  .jump-selects{
+    display:flex;
+    gap:8px;
+    justify-content:center;
+    margin-top:6px;
+  }
+  .jump-selects select{
+    font-family:'Cormorant SC', serif;
+    font-size:13px;
+    background:var(--parchment);
+    border:1px solid var(--gold);
+    border-radius:4px;
+    padding:4px 8px;
+    color:var(--ink);
+    cursor:pointer;
+  }
+  @media (max-width:380px){
+    .card{ padding:28px 20px 22px; }
+    .big-date{ font-size:36px; }
+    .saint-name{ font-size:26px; }
+    .quote-text{ font-size:18px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="app-label">✠ Saint of the Day ✠</div>
+
+  <div class="rings"><span></span><span></span><span></span></div>
+
+  <div class="card-wrap">
+    <div class="card" id="card">
+      <p class="eyebrow" id="weekday">Friday</p>
+      <h1 class="big-date" id="bigDate">Jun 19</h1>
+
+      <div class="medallion-frame">
+        <div class="medallion" id="medallion">
+          <span class="fallback-initial" id="fallbackInitial">?</span>
+        </div>
+      </div>
+
+      <h2 class="saint-name" id="saintName">Loading…</h2>
+      <p class="saint-title" id="saintTitle"></p>
+      <p class="saint-born" id="saintBorn"></p>
+
+      <div class="quote-block" id="quoteBlock"></div>
+      <div class="bio-block" id="bioBlock"></div>
+    </div>
+    <div class="perf"></div>
+  </div>
+
+  <div class="controls">
+    <button class="nav-btn" id="prevBtn" aria-label="Previous day">‹ Prev</button>
+    <button class="today-btn" id="todayBtn">Today</button>
+    <button class="nav-btn" id="nextBtn" aria-label="Next day">Next ›</button>
+  </div>
+
+  <div class="jump-row">
+    <label>Jump to a date</label>
+    <div class="jump-selects">
+      <select id="jumpMonth">
+        <option value="0">January</option><option value="1">February</option>
+        <option value="2">March</option><option value="3">April</option>
+        <option value="4">May</option><option value="5">June</option>
+        <option value="6">July</option><option value="7">August</option>
+        <option value="8">September</option><option value="9">October</option>
+        <option value="10">November</option><option value="11">December</option>
+      </select>
+      <select id="jumpDay">
+        <!-- Days 1-31 filled by JS on load -->
+      </select>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------------------------------------------------------------
+// Curated saint dataset. Keyed by "MM-DD" (recurs every year).
+// type: "quote"  -> a documented saying, shown as a quotation
+// type: "reflection" -> no reliable quote survives; a short honest note instead
+// wiki: English Wikipedia article title, used to fetch a real portrait at runtime
+// ---------------------------------------------------------------
+const SAINTS = {
+  // ---- January (fully researched against the General Roman Calendar) ----
+  "01-01": { name:"Mary, Mother of God", title:"Solemnity", type:"quote", text:"Let it be done to me according to your word.", source:"Luke 1:38", wiki:"Mary,_mother_of_Jesus", bio:"The Church's oldest Marian feast, opening the new year with a celebration of Mary's motherhood of Jesus and a prayer for peace." },
+  "01-02": { name:"Basil the Great & Gregory Nazianzen", title:"Bishops and Doctors of the Church", type:"quote", text:"The bread in your cupboard belongs to the hungry.", source:"St. Basil, from his preaching on social justice", wiki:"Basil_of_Caesarea", born:"330 (Basil), 329 (Gregory)", bio:"Lifelong friends from Cappadocia who both became bishops and Doctors of the Church, defending the divinity of Christ against the Arian heresy in the 4th century." },
+  "01-03": { name:"The Holy Name of Jesus", title:"Optional Memorial", type:"quote", text:"At the name of Jesus every knee should bend.", source:"Philippians 2:10", wiki:null, bio:"A devotion dating to the Middle Ages, when preachers like Bernardine of Siena promoted the monogram 'IHS' as a focus for prayer on the name of Jesus." },
+  "01-06": { name:"The Epiphany of the Lord", title:"Solemnity", type:"quote", text:"We saw his star, and have come to worship him.", source:"the Magi, Matthew 2:2", wiki:"Biblical_Magi", bio:"Commemorates the Magi's visit to the infant Jesus, traditionally marking the revelation of Christ to the wider, non-Jewish world." },
+  "01-07": { name:"Raymond of Penyafort", title:"Priest", type:"reflection", text:"A Dominican canon lawyer who, legend says, once sailed home across the open sea standing on his own cloak rather than stay where his conscience couldn't rest.", wiki:"Raymond_of_Penyafort", born:"1175", bio:"A Spanish Dominican and canon lawyer who compiled the Church's scattered laws into one authoritative collection for Pope Gregory IX. Patron of canon lawyers." },
+  "01-13": { name:"Hilary of Poitiers", title:"Bishop and Doctor of the Church", type:"quote", text:"The Church is never stronger than when she is attacked, never better known than when accused.", source:"Against Auxentius", wiki:"Hilary_of_Poitiers", born:"c. 315", bio:"A French bishop who converted from paganism as an adult and became one of the fiercest Western defenders of orthodox Christianity against Arianism." },
+  "01-17": { name:"Anthony, Abbot", title:"Father of Monasticism", type:"quote", text:"I no longer fear God — I love Him.", source:"Sayings of the Desert Fathers", wiki:"Anthony_the_Great", born:"c. 251", bio:"An Egyptian who sold his inheritance at twenty to live alone in the desert, becoming the founding figure of Christian monasticism. Patron of monks." },
+  "01-20": { name:"Sebastian", title:"Martyr", type:"reflection", text:"Tradition holds he survived a volley of arrows, then returned to confront the emperor over his persecution of Christians — and was martyred a second time.", wiki:"Saint_Sebastian", companions:"Shared today with St. Fabian, Pope and Martyr, said to have been chosen pope after a dove landed on his head.", born:"c. 256", bio:"A Roman soldier said to have served in Emperor Diocletian's court while secretly aiding persecuted Christians. Patron of athletes and soldiers." },
+  "01-21": { name:"Agnes", title:"Virgin and Martyr", type:"quote", text:"He who chose me first shall have me.", source:"from her traditional Acts of martyrdom", wiki:"Agnes_of_Rome", born:"c. 291", bio:"A Roman girl of about twelve, executed for refusing marriage and renouncing her Christian faith. Patron of girls and engaged couples." },
+  "01-22": { name:"Vincent, Deacon", title:"Deacon and Martyr", type:"quote", text:"I have always prayed to be exactly as I am now.", source:"his traditional Acts, said from the rack", wiki:"Vincent_of_Saragossa", born:"3rd century", bio:"A deacon of Saragossa tortured to death during the persecution of Diocletian, one of Spain's earliest and most venerated martyrs." },
+  "01-24": { name:"Francis de Sales", title:"Bishop and Doctor of the Church", type:"quote", text:"Be who you are, and be that well.", source:"Introduction to the Devout Life", wiki:"Francis_de_Sales", born:"1567", bio:"A bishop of Geneva known for gentle, accessible spiritual writing aimed at laypeople rather than only clergy. Patron of writers and journalists." },
+  "01-25": { name:"The Conversion of Saint Paul", title:"Feast", type:"quote", text:"I have competed well; I have finished the race.", source:"Paul's own words, 2 Timothy 4:7", wiki:"Paul_the_Apostle", born:"c. 5", bio:"Celebrates the moment a Pharisee named Saul, struck blind on the road to Damascus, became the Apostle Paul and the Church's most influential missionary." },
+  "01-26": { name:"Timothy and Titus", title:"Bishops, Disciples of St. Paul", type:"reflection", text:"We know them almost entirely through Paul's letters to them — proof of how far a mentor's trust can carry a life of quiet service.", wiki:"Saint_Timothy", born:"1st century", bio:"Two young companions of Paul entrusted with leading early Christian communities — Timothy at Ephesus, Titus on the island of Crete." },
+  "01-27": { name:"Angela Merici", title:"Virgin, Foundress of the Ursulines", type:"quote", text:"Beware of trying to accomplish anything by force.", source:"her Last Counsels", wiki:"Angela_Merici", born:"1474", bio:"An orphaned Italian laywoman who founded the Company of St. Ursula to educate poor girls, the first community of religious women not bound to a cloister." },
+  "01-28": { name:"Thomas Aquinas", title:"Priest and Doctor of the Church", type:"quote", text:"There is nothing on earth more prized than true friendship.", source:"his writings", wiki:"Thomas_Aquinas", born:"1225", bio:"An Italian Dominican friar whose Summa Theologica became the most influential work of Catholic theology. Patron of students and universities." },
+  "01-31": { name:"John Bosco", title:"Priest", type:"quote", text:"Act today in such a way that you need not blush tomorrow.", wiki:"John_Bosco", born:"1815", bio:"An Italian priest who built schools, workshops, and oratories for the street children of industrializing Turin. Patron of young people and apprentices." },
+
+  // ---- February (fully researched against the General Roman Calendar) ----
+  "02-02": { name:"The Presentation of the Lord", title:"Feast", type:"quote", text:"Now you may dismiss your servant in peace.", source:"Simeon, Luke 2:29", wiki:null, bio:"Also called Candlemas, this feast recalls Mary and Joseph presenting the infant Jesus at the Temple, where the elderly Simeon recognized him as the promised Messiah." },
+  "02-03": { name:"Blaise", title:"Bishop and Martyr", type:"reflection", text:"Almost nothing of his own words survives; he's remembered chiefly for healing a boy choking on a fishbone, which is why throats are still blessed in his name every February 3.", wiki:"Saint_Blaise", companions:"Shared today with St. Ansgar, the 'Apostle of the North,' who spent thirty-five years evangelizing Scandinavia and watched much of it lapse back into paganism in his own lifetime.", born:"4th century", bio:"An Armenian bishop and physician martyred under Licinius; medieval legend credits him with healing a choking child, which is why throats are blessed in his name." },
+  "02-05": { name:"Agatha", title:"Virgin and Martyr", type:"quote", text:"Lord, my Creator, you have protected me since the cradle — receive now my soul.", source:"from her traditional Acts of martyrdom", wiki:"Agatha_of_Sicily", born:"c. 231", bio:"A Sicilian noblewoman tortured for refusing the advances of a Roman official; one of seven women named in the Roman Canon of the Mass." },
+  "02-06": { name:"Paul Miki and Companions", title:"Martyrs", type:"quote", text:"I forgive my persecutors. I do not hate them.", source:"said from the cross, Nagasaki, 1597", wiki:"Paul_Miki", born:"c. 1562", bio:"A Japanese Jesuit brother crucified alongside twenty-five companions in Nagasaki in 1597, among the first martyrs of the Japanese Church." },
+  "02-08": { name:"Josephine Bakhita", title:"Virgin", type:"quote", text:"Today, I am definitely free.", source:"said of her own emancipation", wiki:"Josephine_Bakhita", companions:"Shared today with St. Jerome Emiliani, Priest, founder of the Somascan Fathers, who once told his hungry orphans, \"Do not doubt, my sons, the Lord will take care!\"", born:"c. 1869", bio:"A Sudanese woman kidnapped and enslaved as a child, who later gained freedom in Italy and became a Canossian sister. Patron of Sudan and trafficking survivors." },
+  "02-10": { name:"Scholastica", title:"Virgin", type:"quote", text:"I asked a favor of you and you refused it. I asked God, and He granted it.", source:"to her brother St. Benedict, recorded by St. Gregory the Great", wiki:"Scholastica", born:"c. 480", bio:"Twin sister of St. Benedict and founder of one of the earliest communities of Benedictine nuns, near Monte Cassino." },
+  "02-11": { name:"Our Lady of Lourdes", title:"Optional Memorial", type:"quote", text:"I am the Immaculate Conception.", source:"words reported by St. Bernadette Soubirous, 1858", wiki:"Our_Lady_of_Lourdes", bio:"Commemorates the 1858 apparitions of Mary to fourteen-year-old Bernadette Soubirous in a grotto at Lourdes, France, now a major pilgrimage site associated with healing." },
+  "02-14": { name:"Cyril & Methodius", title:"Monk and Bishop", type:"quote", text:"However worn out I am, I go with joy for the sake of the faith.", source:"St. Cyril, traditionally attributed", wiki:"Saints_Cyril_and_Methodius", born:"827 (Cyril), 815 (Methodius)", bio:"Greek brothers who devised a Slavic alphabet to translate Scripture and the liturgy, earning the title 'Apostles to the Slavs.' Co-patrons of Europe." },
+  "02-17": { name:"The Seven Holy Founders", title:"Founders of the Servite Order", type:"reflection", text:"Seven Florentine cloth merchants who, in 1233, walked away from their trades together to live in penance and devotion to Mary, founding the Servite Order.", wiki:null, bio:"Seven wealthy Florentine merchants who in 1233 gave up their trades to live in penance on Monte Senario, founding the Servite Order." },
+  "02-21": { name:"Peter Damian", title:"Bishop and Doctor of the Church", type:"quote", text:"Those who do not love the Cross of Christ do not love Christ.", source:"Sermo XVIII", wiki:"Peter_Damian", born:"1007", bio:"A Benedictine monk and cardinal who relentlessly campaigned against corruption and clerical misconduct in the 11th-century Church." },
+  "02-22": { name:"The Chair of Saint Peter", title:"Feast", type:"quote", text:"You are the Christ, the Son of the living God.", source:"Peter's confession, Matthew 16:16", wiki:"Saint_Peter", bio:"Honors Peter's role as the first bishop of Rome and leader of the Apostles, a commemoration observed since at least the 4th century." },
+  "02-23": { name:"Polycarp", title:"Bishop and Martyr", type:"quote", text:"Eighty-six years I have served Him, and He has done me no wrong. How can I blaspheme my King who saved me?", source:"said to the proconsul before his execution, recorded in The Martyrdom of Polycarp", wiki:"Polycarp", born:"c. 69", bio:"A disciple of the Apostle John who became bishop of Smyrna and was burned and stabbed to death at eighty-six for refusing to renounce Christ." },
+  "02-27": { name:"Gregory of Narek", title:"Abbot and Doctor of the Church", type:"quote", text:"An encyclopedia of prayer for all nations.", source:"his own description of his Book of Lamentations", wiki:"Gregory_of_Narek", born:"c. 950", bio:"An Armenian monk-poet whose Book of Lamentations is considered one of the great mystical works of medieval Christianity. Patron of Armenia." },
+
+  // ---- March onward (seed set so far — more on the way) ----
+  "03-04": { name:"Casimir", title:"Prince", type:"reflection", text:"A Polish-Lithuanian prince who refused an arranged marriage and a life of luxury, sleeping on the floor and praying outside locked church doors at night rather than live as the heir he was raised to be.", wiki:"Saint_Casimir", born:"1458", bio:"A Polish-Lithuanian prince who refused a political marriage and royal comforts, dying of illness at twenty-five. Patron of Poland and Lithuania." },
+  "03-07": { name:"Perpetua and Felicity", title:"Martyrs", type:"reflection", text:"Imprisoned together in Carthage, the two women refused to renounce their faith even as they faced execution.", wiki:"Perpetua_and_Felicity", born:"d. 203", bio:"A young noblewoman and her enslaved companion, executed together in the arena at Carthage; their martyrdom account is one of the earliest written partly by a woman." },
+  "03-08": { name:"John of God", title:"Religious", type:"quote", text:"Labor without stopping; do all the good works you can while you still have the time.", wiki:"John_of_God", born:"1495", bio:"A Portuguese former soldier who, after a breakdown, devoted himself to nursing the sick and founded a hospital in Granada. Patron of hospitals and nurses." },
+  "03-09": { name:"Frances of Rome", title:"Religious", type:"quote", text:"A married woman must, when called upon, leave her devotions to God at the altar to find Him in her household affairs.", wiki:"Frances_of_Rome", born:"1384", bio:"A Roman noblewoman who balanced marriage and motherhood with care for the poor, founding a community of women dedicated to charity." },
+  "03-17": { name:"Patrick", title:"Bishop", type:"quote", text:"Christ with me, Christ before me, Christ behind me.", source:"traditionally attributed, the Lorica", wiki:"Saint_Patrick", born:"c. 385", bio:"A Romano-British missionary kidnapped as a slave to Ireland in his youth, who later returned as a bishop and became the island's patron saint." },
+  "03-18": { name:"Cyril of Jerusalem", title:"Bishop and Doctor of the Church", type:"quote", text:"Lay aside things of the present, and put your faith in things to come.", source:"Catechetical Lecture I", wiki:"Cyril_of_Jerusalem", born:"c. 315", bio:"Bishop of Jerusalem whose catechetical lectures to new converts remain one of the best windows into 4th-century Christian teaching." },
+  "03-19": { name:"Joseph", title:"Spouse of the Blessed Virgin Mary", type:"reflection", text:"Scripture records no words of his — only that he listened, and obeyed.", wiki:"Saint_Joseph", born:"1st century BC", bio:"The husband of Mary and Jesus' legal father, remembered for quiet obedience rather than any recorded words. Patron of workers and the universal Church." },
+  "03-23": { name:"Turibius of Mogrovejo", title:"Bishop", type:"quote", text:"Time is not our own, and we must give a strict account of it.", wiki:"Turibius_de_Mogrovejo", born:"1538", bio:"A Spanish lawyer unexpectedly made Archbishop of Lima, where he spent twenty-five years traveling Peru on foot to evangelize and defend indigenous people." },
+  "03-25": { name:"The Annunciation of the Lord", title:"Solemnity", type:"quote", text:"Do not be afraid, Mary, for you have found favor with God.", source:"the Angel Gabriel, Luke 1:30", wiki:null, bio:"Celebrates the moment the angel Gabriel told Mary she would conceive Jesus — placed nine months before Christmas." },
+  "04-29": { name:"Catherine of Siena", title:"Virgin and Doctor of the Church", type:"quote", text:"Be who God meant you to be and you will set the world on fire.", source:"from her letters", wiki:"Catherine_of_Siena", born:"1347", bio:"An Italian Dominican laywoman and mystic who advised popes and helped persuade Gregory XI to return the papacy to Rome from Avignon. Doctor of the Church." },
+  "05-26": { name:"Philip Neri", title:"Priest", type:"quote", text:"Cast yourself into the arms of God, and be sure He will catch you.", wiki:"Philip_Neri", born:"1515", bio:"A Florentine priest known as the 'Apostle of Rome' for his humor, joyful spirituality, and care for the city's youth and pilgrims." },
+  "06-13": { name:"Anthony of Padua", title:"Priest and Doctor of the Church", type:"quote", text:"Actions speak louder than words; let your words teach, and your actions speak.", wiki:"Anthony_of_Padua", born:"1195", bio:"A Portuguese Franciscan famed for his preaching and miracles, now invoked by millions to help find lost items. Patron of lost articles and travelers." },
+  "06-22": { name:"Thomas More", title:"Martyr", type:"quote", text:"I die the King's good servant, but God's first.", source:"said at his execution, 1535", wiki:"Thomas_More", companions:"Shared today with St. John Fisher, Bishop and Martyr.", born:"1478", bio:"An English lawyer, scholar, and Lord Chancellor executed by Henry VIII for refusing to recognize the king's authority over the Church." },
+  "07-22": { name:"Mary Magdalene", title:"Witness to the Resurrection", type:"quote", text:"I have seen the Lord.", source:"John 20:18", wiki:"Mary_Magdalene", born:"1st century", bio:"A follower of Jesus present at the crucifixion and the first to encounter him risen from the tomb, earning her the title 'Apostle to the Apostles.'" },
+  "07-31": { name:"Ignatius of Loyola", title:"Priest, Founder of the Jesuits", type:"quote", text:"Go forth and set the world on fire.", wiki:"Ignatius_of_Loyola", born:"1491", bio:"A Spanish soldier wounded in battle who underwent a profound conversion and founded the Jesuits, shaping Catholic education and spirituality for centuries." },
+  "08-04": { name:"Jean Vianney", title:"Priest, the Curé of Ars", type:"quote", text:"The Mass is the soul of the priesthood.", wiki:"Jean_Vianney", born:"1786", bio:"A French parish priest in the small village of Ars who became famous for spending up to sixteen hours a day hearing confessions. Patron of parish priests." },
+  "08-09": { name:"Teresa Benedicta of the Cross", title:"Virgin and Martyr (Edith Stein)", type:"quote", text:"Do not accept anything as truth if it lacks love.", wiki:"Edith_Stein", born:"1891", bio:"A German Jewish philosopher who converted to Catholicism and became a Carmelite nun, killed at Auschwitz in 1942." },
+  "08-11": { name:"Clare of Assisi", title:"Virgin, Foundress of the Poor Clares", type:"reflection", text:"She traded a noble household for a bare floor, and called it freedom.", wiki:"Clare_of_Assisi", born:"1194", bio:"A noblewoman who left her family to follow Francis of Assisi, founding the Poor Clares, an order devoted to radical poverty." },
+  "08-14": { name:"Maximilian Kolbe", title:"Priest and Martyr", type:"reflection", text:"At Auschwitz, he volunteered to die in the place of a stranger condemned to execution.", wiki:"Maximilian_Kolbe", born:"1894", bio:"A Polish Franciscan friar who volunteered to die in place of a stranger at Auschwitz in 1941, after the man was selected for starvation as punishment." },
+  "08-28": { name:"Augustine of Hippo", title:"Bishop and Doctor of the Church", type:"quote", text:"Our heart is restless until it rests in You.", source:"Confessions", wiki:"Augustine_of_Hippo", born:"354", bio:"A North African bishop whose restless youth and dramatic conversion, recounted in his Confessions, made him one of Christianity's most influential theologians." },
+  "09-03": { name:"Gregory the Great", title:"Pope and Doctor of the Church", type:"reflection", text:"He reorganized the Church's care for Rome's poor while gravely ill himself, and sent missionaries to England.", wiki:"Pope_Gregory_I", born:"c. 540", bio:"A Roman aristocrat who became pope amid plague and invasion, reorganizing the Church's care for the poor and sending missionaries to England." },
+  "09-27": { name:"Vincent de Paul", title:"Priest", type:"quote", text:"Go to the poor; you will find God.", wiki:"Vincent_de_Paul", born:"1581", bio:"A French priest who organized large-scale charity for the poor and founded the Vincentians and, with Louise de Marillac, the Daughters of Charity." },
+  "09-30": { name:"Jerome", title:"Priest and Doctor of the Church", type:"quote", text:"Ignorance of Scripture is ignorance of Christ.", wiki:"Jerome", born:"c. 342", bio:"A scholar-monk who translated the Bible into Latin — the Vulgate — a text that shaped Western Christianity for over a thousand years." },
+  "10-01": { name:"Thérèse of the Child Jesus", title:"Virgin and Doctor of the Church", type:"quote", text:"I will spend my heaven doing good on earth.", source:"Story of a Soul", wiki:"Thérèse_of_Lisieux", born:"1873", bio:"A French Carmelite nun who died at twenty-four, leaving a spiritual memoir praising small, hidden acts of love known as her 'Little Way.'" },
+  "10-04": { name:"Francis of Assisi", title:"Founder of the Franciscans", type:"quote", text:"Be praised, my Lord, through all your creatures.", source:"Canticle of the Creatures", wiki:"Francis_of_Assisi", born:"1181", bio:"A wealthy merchant's son who renounced his inheritance to live in poverty, founding the Franciscans and inspiring a renewal of simplicity in the medieval Church." },
+  "10-15": { name:"Teresa of Jesus", title:"Virgin and Doctor of the Church (Teresa of Ávila)", type:"quote", text:"Let nothing disturb you; all things are passing — God never changes.", wiki:"Teresa_of_Ávila", born:"1515", bio:"A Spanish Carmelite mystic and reformer whose writings on prayer made her one of the few women named a Doctor of the Church." },
+  "10-22": { name:"John Paul II", title:"Pope", type:"quote", text:"Be not afraid.", source:"from his inaugural homily, 1978", wiki:"Pope_John_Paul_II", born:"1920", bio:"A Polish pope whose 27-year papacy included a pivotal role in the fall of communism in Eastern Europe and the most-traveled pontificate in history." },
+  "11-03": { name:"Martin de Porres", title:"Religious", type:"reflection", text:"Born outside marriage and refused full vows because of his race, he was made indispensable by his charity toward the poor.", wiki:"Martin_de_Porres", born:"1579", bio:"A Peruvian friar of mixed African and Spanish descent who, despite the racial restrictions of his time, became renowned for healing and charity toward the poor." },
+  "11-17": { name:"Elizabeth of Hungary", title:"Religious", type:"reflection", text:"A princess who gave away her household's wealth to the poor, and died at twenty-four.", wiki:"Elizabeth_of_Hungary", born:"1207", bio:"A Hungarian princess married into German nobility who, after her husband's death, gave away her wealth to build a hospital for the poor." },
+  "11-22": { name:"Cecilia", title:"Virgin and Martyr", type:"reflection", text:"Tradition holds she sang to God in her heart even as she faced martyrdom.", wiki:"Saint_Cecilia", born:"2nd–3rd century", bio:"A Roman martyr whose legend describes her singing to God even as she faced death, making her the patron saint of musicians." },
+  "12-03": { name:"Francis Xavier", title:"Priest, Missionary", type:"reflection", text:"A Jesuit missionary said to have baptized tens of thousands across Asia in a single decade.", wiki:"Francis_Xavier", born:"1506", bio:"A Basque Jesuit co-founder who became one of history's most prolific missionaries, traveling across India, Southeast Asia, and Japan." },
+  "12-06": { name:"Nicholas", title:"Bishop", type:"reflection", text:"A 4th-century bishop famed for secretly giving gifts to the poor — the root of the Santa Claus legend.", wiki:"Saint_Nicholas", born:"c. 270", bio:"A 4th-century Greek bishop in modern-day Turkey famed for secret gift-giving and generosity to the poor — the historical root of the Santa Claus legend." },
+  "12-14": { name:"John of the Cross", title:"Priest and Doctor of the Church", type:"quote", text:"In the evening of life, we will be judged on love alone.", wiki:"John_of_the_Cross", born:"1542", bio:"A Spanish Carmelite mystic and poet who, with Teresa of Ávila, reformed the Carmelite order and wrote classics like Dark Night of the Soul." },
+  "12-26": { name:"Stephen", title:"The First Martyr", type:"quote", text:"Lord, do not hold this sin against them.", source:"Acts 7:60", wiki:"Saint_Stephen", born:"1st century", bio:"One of the first seven deacons chosen by the apostles, stoned to death for his faith and traditionally honored as Christianity's first martyr." },
+  "04-02": { name:"Francis of Paola", title:"Hermit", type:"reflection", text:"He called his fasting 'the Lent that never ends,' refusing meat, eggs, and dairy for his entire adult life.", wiki:"Francis_of_Paola", born:"1416", bio:"A Calabrian hermit who founded the Order of Minims, he became such a renowned wonder-worker that King Louis XI of France summoned him to his deathbed. Patron of mariners." },
+  "04-04": { name:"Isidore of Seville", title:"Bishop and Doctor of the Church", type:"reflection", text:"As bishop of Seville for 37 years, he compiled a 20-volume encyclopedia of all known learning that remained a standard schoolbook in Europe for nine centuries.", wiki:"Isidore_of_Seville", born:"c. 560", bio:"He succeeded his own brother as bishop and helped unify Visigothic Spain under Nicene Christianity. Informally invoked by some today as a patron of the internet." },
+  "04-05": { name:"Vincent Ferrer", title:"Priest", type:"quote", text:"Fear God and give him honor, for the hour of his judgment is coming.", source:"his motto, inscribed beneath his image, from Revelation 14:7", wiki:"Vincent_Ferrer", born:"1350", bio:"A Dominican preacher who drew enormous crowds across Spain and France warning of judgment, and helped end the Western Schism by persuading a rival claimant to the papacy to step down." },
+  "04-07": { name:"John Baptist de la Salle", title:"Priest", type:"quote", text:"Let your example instruct your students much more than your words.", wiki:"Jean-Baptiste_de_La_Salle", born:"1651", bio:"A wealthy French priest who gave up status to train teachers and open free schools for poor children, founding the Brothers of the Christian Schools. Patron of teachers." },
+  "04-11": { name:"Stanislaus", title:"Bishop and Martyr", type:"reflection", text:"As bishop of Kraków, he excommunicated King Bolesław II for his cruelty — and was killed by the king's own hand while celebrating Mass.", wiki:"Stanislaus_of_Szczepanów", born:"1030", bio:"His murder in 1079 forced the king into exile and helped cement Stanislaus as Poland's patron saint." },
+  "04-13": { name:"Martin I", title:"Pope and Martyr", type:"reflection", text:"As pope, he condemned a heresy backed by the Byzantine emperor, who had him kidnapped from Rome, tried, and exiled to Crimea, where he died of mistreatment.", wiki:"Pope_Martin_I", bio:"The last pope venerated as a martyr, his defiance of imperial religious policy cost him the support of erstwhile allies who feared Byzantine reprisal." },
+  "04-21": { name:"Anselm", title:"Bishop and Doctor of the Church", type:"quote", text:"I do not seek to understand in order to believe, but I believe in order to understand.", source:"Proslogion", wiki:"Anselm_of_Canterbury", born:"c. 1033", bio:"A Benedictine monk who became Archbishop of Canterbury, clashing repeatedly with English kings over the Church's independence from royal control." },
+  "04-23": { name:"George", title:"Martyr", type:"reflection", text:"A Roman soldier beheaded under Diocletian around 303 for refusing to renounce his faith — the famous dragon-slaying legend wasn't attached to his story until centuries later.", wiki:"Saint_George", born:"c. 280", bio:"Patron of England, soldiers, and several other nations, almost nothing reliable is known of his actual life beyond his martyrdom.", companions:"Shared today with St. Adalbert of Prague, a Czech bishop killed by Baltic Prussians in 997 while trying to convert them to Christianity." },
+  "04-25": { name:"Mark", title:"Evangelist", type:"reflection", text:"Traditionally the author of the earliest Gospel, written for a Roman audience in plain, fast-paced narrative, and founder of the church in Alexandria, Egypt.", wiki:"Mark_the_Evangelist", born:"1st century", bio:"His symbol, a winged lion, became the emblem of Venice after the city acquired his relics in the 9th century." },
+  "04-28": { name:"Peter Chanel", title:"Priest and Martyr", type:"quote", text:"It does not matter whether or not I am killed; the religion has taken root on the island; it will not be destroyed by my death, since it comes not from men but from God.", source:"said shortly before his murder, Futuna, 1841", wiki:"Peter_Chanel", born:"1803", bio:"The first Catholic martyr of Oceania, he was clubbed and axed to death after a local chief's son asked to be baptized; the island converted to Christianity within two years of his death.", companions:"Shared today with St. Louis Grignion de Montfort, a French priest whose writings on Marian devotion, including True Devotion to Mary, shaped Catholic spirituality for centuries." },
+  "04-30": { name:"Pius V", title:"Pope", type:"reflection", text:"As pope, he enforced the reforms of the Council of Trent, standardized the Roman Missal still used today in its traditional form, and organized the fleet that won the naval Battle of Lepanto in 1571.", wiki:"Pope_Pius_V", born:"1504", bio:"A former Dominican friar known for personal austerity even as pope, he remains one of the most consequential reforming popes of the Counter-Reformation." },
+  "05-01": { name:"Joseph the Worker", title:"Optional Memorial", type:"reflection", text:"Instituted in 1955 to offer a Christian vision of labor alongside May Day's secular and political associations.", wiki:"Saint_Joseph", bio:"It honors Joseph's own trade as a carpenter, presenting ordinary work as a path to holiness rather than something separate from it." },
+  "05-02": { name:"Athanasius", title:"Bishop and Doctor of the Church", type:"reflection", text:"Exiled five times for defending Christ's full divinity against Arianism, he became so famous for standing alone against prevailing opinion that historians coined the phrase 'Athanasius contra mundum' — Athanasius against the world.", wiki:"Athanasius_of_Alexandria", born:"c. 296", bio:"Bishop of Alexandria, his theological battles shaped the wording of the Nicene Creed still recited in churches today." },
+  "05-03": { name:"Philip and James", title:"Apostles", type:"reflection", text:"Two of the Twelve Apostles — Philip, who brought Nathanael to Jesus, and James 'the Less,' often identified as a relative of Jesus and the first bishop of Jerusalem.", wiki:"James,_son_of_Alphaeus", born:"1st century", bio:"Their joint feast reflects an ancient tradition that their relics were enshrined together in Rome's Basilica of the Holy Apostles." },
+  "05-10": { name:"John of Ávila", title:"Priest and Doctor of the Church", type:"reflection", text:"A Spanish priest so influential in his preaching that he's remembered as the 'Apostle of Andalusia,' personally encouraging the young Teresa of Ávila in her reforms.", wiki:"John_of_Ávila", born:"1500", bio:"Declared a Doctor of the Church in 2012, his writings on pastoral renewal influenced the Council of Trent's reforms of priestly formation." },
+  "05-12": { name:"Nereus and Achilleus", title:"Martyrs", type:"reflection", text:"Roman soldiers turned Christian converts, martyred for refusing to continue serving in the army's persecutions.", wiki:"Nereus_and_Achilleus", born:"1st century", bio:"Among the earliest Roman martyrs, their tomb on the Via Ardeatina was already a pilgrimage site by the 4th century.", companions:"Shared today with St. Pancras, a fourteen-year-old Roman martyred under Diocletian, after whom London's Pancras railway station and district are named." },
+  "05-13": { name:"Our Lady of Fátima", title:"Optional Memorial", type:"quote", text:"I am the Lady of the Rosary.", source:"words reported by the child visionaries, Fátima, Portugal, 1917", wiki:"Our_Lady_of_Fátima", bio:"Marks the first of six reported Marian apparitions to three shepherd children in rural Portugal during World War I, a devotion later promoted heavily by Pope John Paul II." },
+  "05-14": { name:"Matthias", title:"Apostle", type:"reflection", text:"Chosen by lot to replace Judas among the Twelve, fulfilling Peter's call in Acts to fill the vacant apostolic seat.", wiki:"Matthias_the_Apostle", born:"1st century", bio:"Scripture records little else about him; later traditions place his missionary work and martyrdom anywhere from Judea to Georgia or Ethiopia." },
+  "05-18": { name:"John I", title:"Pope and Martyr", type:"reflection", text:"Sent to Constantinople by an Arian Gothic king to negotiate on behalf of persecuted Western Christians, he was imprisoned on his return on suspicion of disloyalty and died from his treatment in custody.", wiki:"Pope_John_I", bio:"His death in 526 made him one of several early popes venerated as a martyr of political circumstance rather than outright persecution for the faith itself." },
+  "05-20": { name:"Bernardine of Siena", title:"Priest", type:"reflection", text:"A Franciscan preacher who popularized the monogram 'IHS' for the Holy Name of Jesus, displaying it on a placard at the end of his sermons across Italy.", wiki:"Bernardine_of_Siena", born:"1380", bio:"Famed for restoring peace between feuding factions in Italian cities through his preaching, he's considered one of the most effective Franciscan preachers of the 15th century." },
+  "05-21": { name:"Christopher Magallanes and Companions", title:"Martyrs", type:"reflection", text:"A Mexican priest shot without trial in 1927 during the Cristero anti-Catholic persecution, alongside twenty-four companion priests.", wiki:"Cristóbal_Magallanes_Jara", born:"1869", bio:"He was on his way to celebrate Mass when arrested; the group are now honored collectively as martyrs of the Mexican Cristero War." },
+  "05-22": { name:"Rita of Cascia", title:"Religious", type:"reflection", text:"An Italian widow who, after her husband and both sons died in a cycle of family vendetta, joined an Augustinian convent and became known as the patron saint of impossible causes.", wiki:"Rita_of_Cascia", born:"1381", bio:"Devotees today often bring roses to her shrine in Cascia, recalling a legend of roses blooming out of season near her tomb." },
+  "05-25": { name:"Bede the Venerable", title:"Priest and Doctor of the Church", type:"quote", text:"It is time for me to return to Him who formed me from nothing.", source:"his last words, recorded by his disciple Cuthbert", wiki:"Bede", born:"c. 672", bio:"An English Benedictine monk whose Ecclesiastical History of the English People remains the primary source for early Anglo-Saxon Christianity.", companions:"Shared today with Pope St. Gregory VII, a reforming pope who battled lay control over the appointment of bishops, and St. Mary Magdalene de' Pazzi, a Florentine Carmelite mystic." },
+  "05-27": { name:"Augustine of Canterbury", title:"Bishop", type:"reflection", text:"Sent by Pope Gregory the Great in 597 to evangelize Anglo-Saxon England, he became the first Archbishop of Canterbury.", wiki:"Augustine_of_Canterbury", bio:"His mission converted King Æthelberht of Kent and laid the foundation for the English Church, though widespread conversion of England took generations more." },
+  "05-29": { name:"Paul VI", title:"Pope", type:"reflection", text:"As pope, he closed the Second Vatican Council in 1965 and became the first pope in over 150 years to travel internationally, visiting six continents.", wiki:"Pope_Paul_VI", born:"1897", bio:"His 1968 encyclical Humanae Vitae on marriage and birth control remains one of the most debated papal documents of the 20th century." },
+  "05-31": { name:"The Visitation of the Blessed Virgin Mary", title:"Feast", type:"quote", text:"My soul magnifies the Lord, and my spirit rejoices in God my Savior.", source:"Mary's Magnificat, Luke 1:46-47", wiki:null, bio:"Commemorates Mary's visit to her pregnant relative Elizabeth, where she spoke the prayer now known as the Magnificat, still recited daily in the Church's evening prayer." },
+  "06-01": { name:"Justin", title:"Martyr", type:"reflection", text:"A pagan philosopher converted to Christianity through reasoned argument, he became one of the faith's first intellectual defenders before being beheaded in Rome around 165.", wiki:"Justin_Martyr", born:"c. 100", bio:"His First and Second Apology, addressed directly to Roman emperors, are among the earliest surviving Christian philosophical writings." },
+  "06-02": { name:"Marcellinus and Peter", title:"Martyrs", type:"reflection", text:"A priest and an exorcist martyred together in Rome under Diocletian; legend says their own executioner converted after witnessing their faith.", wiki:"Marcellinus_and_Peter", bio:"Their names are recited daily in the Roman Canon of the Mass, among the Church's oldest list of venerated martyrs." },
+  "06-03": { name:"Charles Lwanga and Companions", title:"Martyrs", type:"reflection", text:"A group of young Ugandan converts, several of them royal pages, burned alive in 1886 on the orders of King Mwanga II for refusing to renounce their new Christian faith.", wiki:"Charles_Lwanga", born:"c. 1860", bio:"Their martyrdom helped spark rapid growth of Christianity in Uganda; they are patrons of African youth and Catholic action." },
+  "06-05": { name:"Boniface", title:"Bishop and Martyr", type:"reflection", text:"An English missionary who felled a sacred oak tree devoted to the Germanic god Thor to demonstrate Christianity's God was more powerful, and was later killed by axe while reading the Gospels to converts in Frisia.", wiki:"Saint_Boniface", born:"c. 675", bio:"Known as the 'Apostle of the Germans,' he reorganized the Church across Bavaria and Germany and remains one of England's most influential missionary exports." },
+  "06-06": { name:"Norbert", title:"Bishop", type:"reflection", text:"A wealthy nobleman who, after narrowly surviving a lightning strike that threw him from his horse, abandoned a comfortable clerical post to found the reforming Premonstratensian order.", wiki:"Norbert_of_Xanten", born:"c. 1080", bio:"He later became Archbishop of Magdeburg and worked to end a papal schism, supporting the legitimate pope's claim." },
+  "06-09": { name:"Ephrem", title:"Deacon and Doctor of the Church", type:"reflection", text:"Called the 'Harp of the Holy Spirit' for the hundreds of hymns he wrote to teach Christian doctrine to ordinary people in song.", wiki:"Ephrem_the_Syrian", born:"c. 306", bio:"A Syriac deacon, his poetic theology shaped Eastern Christian liturgy for centuries and still influences Syriac-rite worship today." },
+  "06-11": { name:"Barnabas", title:"Apostle", type:"reflection", text:"A Jewish Levite from Cyprus who vouched for the newly converted Paul to the suspicious apostles in Jerusalem, then became his missionary companion.", wiki:"Barnabas", born:"1st century", bio:"The Acts of the Apostles calls him 'son of encouragement'; tradition holds he was later martyred in Cyprus." },
+  "06-19": { name:"Romuald", title:"Abbot", type:"reflection", text:"An Italian nobleman who, after witnessing his father kill a man in a duel, retreated to a life of extreme penance and founded the Camaldolese, a hermit-monk order combining solitude with community.", wiki:"Romuald", born:"c. 951", bio:"He is said to have founded or reformed over a hundred monasteries and hermitages across Italy during his lifetime." },
+  "06-21": { name:"Aloysius Gonzaga", title:"Religious", type:"reflection", text:"An Italian prince who renounced his inheritance and a guaranteed military career to join the Jesuits, then died at twenty-three nursing plague victims in Rome.", wiki:"Aloysius_Gonzaga", born:"1568", bio:"Patron of Christian youth and students, his short life is often held up as an example of renouncing privilege for service." },
+  "06-24": { name:"The Nativity of Saint John the Baptist", title:"Solemnity", type:"quote", text:"He must become greater; I must become less.", source:"John the Baptist, John 3:30", wiki:"John_the_Baptist", bio:"Six months older than Jesus by tradition, John's birth is one of only three nativities the Church celebrates with its own feast, alongside Jesus and Mary." },
+  "06-27": { name:"Cyril of Alexandria", title:"Bishop and Doctor of the Church", type:"reflection", text:"A fierce defender of Mary's title 'Mother of God' at the Council of Ephesus in 431, where he led the condemnation of a rival teacher's views on Christ.", wiki:"Cyril_of_Alexandria", born:"c. 376", bio:"His theological clashes were sometimes marked by harsh political tactics, but his writings on Christ's nature remain foundational for both Eastern and Western theology." },
+  "06-28": { name:"Irenaeus", title:"Bishop, Martyr, and Doctor of the Church", type:"quote", text:"The glory of God is a human being fully alive.", source:"Against Heresies", wiki:"Irenaeus", born:"c. 130", bio:"A bishop of Lyon and disciple of Polycarp's circle, he wrote the era's most thorough rebuttal of Gnostic heresies. Declared a Doctor of the Church in 2022." },
+  "06-29": { name:"Peter and Paul", title:"Solemnity", type:"quote", text:"Lord, you know everything; you know that I love you.", source:"Peter to the risen Jesus, John 21:17", wiki:"Saint_Peter", bio:"The Church's two greatest apostles, both martyred in Rome under Nero around the same era, are honored together on this solemnity recognizing the city's twin pillars of faith." },
+  "06-30": { name:"The First Martyrs of the Holy Roman Church", title:"Optional Memorial", type:"reflection", text:"Commemorates Roman Christians scapegoated and executed by Emperor Nero after the Great Fire of Rome in 64 AD, the empire's first organized persecution of Christians.", wiki:null, bio:"Tradition holds both Peter and Paul died in this same wave of persecution, making these anonymous victims the seed of Rome's Christian community." },
+  "07-03": { name:"Thomas", title:"Apostle", type:"quote", text:"My Lord and my God!", source:"John 20:28", wiki:"Thomas_the_Apostle", born:"1st century", bio:"Remembered as 'Doubting Thomas' for questioning the resurrection, but tradition holds he went on to evangelize as far as India, where Christian communities still trace their founding to him." },
+  "07-04": { name:"Elizabeth of Portugal", title:"Optional Memorial", type:"reflection", text:"A Portuguese queen who used her position to broker peace between warring family members and neighboring kingdoms, earning the title 'the Peacemaker.'", wiki:"Elizabeth_of_Aragon", born:"1271", bio:"After her husband's death she lived as a Franciscan tertiary, devoting her wealth to hospitals and the poor." },
+  "07-05": { name:"Anthony Zaccaria", title:"Priest", type:"reflection", text:"An Italian physician who became a priest and founded the Barnabites, promoting frequent Communion and public devotions at a time when both were rare.", wiki:"Anthony_Maria_Zaccaria", born:"1502", bio:"His reforms anticipated several practices later encouraged by the Council of Trent." },
+  "07-06": { name:"Maria Goretti", title:"Virgin and Martyr", type:"quote", text:"I forgive him, and I want him with me in heaven.", source:"said of her attacker as she died, 1902", wiki:"Maria_Goretti", born:"1890", bio:"An eleven-year-old Italian girl stabbed for resisting a sexual assault, she became one of the youngest people ever canonized; her attacker later converted in prison, by his own account after she appeared to him in a dream." },
+  "07-09": { name:"Augustine Zhao Rong and Companions", title:"Martyrs", type:"reflection", text:"Commemorates Chinese Catholics and missionaries martyred between the 17th and 20th centuries, including Zhao Rong, a former soldier-turned-priest who guarded a bishop being led to execution and was so moved he converted.", wiki:"Augustine_Zhao_Rong", bio:"Canonized together in 2000, they represent four centuries of Christian martyrdom in China." },
+  "07-11": { name:"Benedict", title:"Abbot", type:"reflection", text:"His Rule for monasteries, balancing prayer, manual work, and community life, became the single most influential document in the history of Western monasticism.", wiki:"Benedict_of_Nursia", born:"c. 480", bio:"Patron of Europe, he founded the monastery at Monte Cassino; the motto 'ora et labora' — pray and work — distilled from his Rule still defines Benedictine life today." },
+  "07-13": { name:"Henry", title:"Optional Memorial", type:"reflection", text:"A Holy Roman Emperor who used his political power to found dioceses, reform monasteries, and support the Church rather than to expand his territory through war.", wiki:"Henry_II,_Holy_Roman_Emperor", born:"973", bio:"He and his wife Cunigunde reportedly lived as a celibate couple; he's one of the few rulers canonized primarily for personal holiness rather than martyrdom." },
+  "07-14": { name:"Camillus de Lellis", title:"Priest", type:"reflection", text:"A reformed gambler and former soldier who, after his own hospital stay revealed how badly patients were treated, founded an order of priests dedicated to nursing the sick and dying.", wiki:"Camillus_de_Lellis", born:"1550", bio:"His followers were among the first to wear a red cross on their habits, centuries before the founding of the Red Cross. Patron of nurses and hospitals." },
+  "07-15": { name:"Bonaventure", title:"Bishop and Doctor of the Church", type:"reflection", text:"As Minister General of the Franciscans, he reconciled the order's competing factions after Francis's death and became one of the era's leading theologians.", wiki:"Bonaventure", born:"1221", bio:"A close friend of Thomas Aquinas, he combined Franciscan spirituality with rigorous philosophy." },
+  "07-16": { name:"Our Lady of Mount Carmel", title:"Optional Memorial", type:"reflection", text:"Honors Mary under her Carmelite title, tied to a tradition that she gave the Carmelite order a sacred scapular as a sign of her protection.", wiki:null, bio:"The devotion is especially associated with the Carmelite order, founded by hermits on Mount Carmel in the Holy Land in the 12th century." },
+  "07-20": { name:"Apollinaris", title:"Optional Memorial", type:"reflection", text:"Traditionally the first bishop of Ravenna, consecrated by St. Peter himself according to legend, and martyred for his preaching after surviving multiple earlier attempts to kill him.", wiki:"Apollinaris_of_Ravenna", born:"1st century", bio:"His relics are housed beneath the famous Basilica of Sant'Apollinare in Classe, decorated with some of the finest Byzantine mosaics in Italy." },
+  "07-21": { name:"Lawrence of Brindisi", title:"Priest and Doctor of the Church", type:"reflection", text:"A Capuchin friar fluent in numerous languages who personally led imperial troops into battle against the Ottomans, carrying only a crucifix while urging soldiers forward.", wiki:"Lawrence_of_Brindisi", born:"1559", bio:"Also a noted diplomat and preacher, he helped negotiate peace agreements between European rulers." },
+  "07-23": { name:"Bridget", title:"Religious", type:"reflection", text:"A Swedish noblewoman and mother of eight who, after her husband's death, founded a religious order and traveled to Rome to call for Church reform and the papacy's return from Avignon.", wiki:"Bridget_of_Sweden", born:"1303", bio:"Her visions and writings made her one of medieval Europe's most influential laywomen; she's a patron saint of Europe." },
+  "07-24": { name:"Sharbel Makhluf", title:"Priest", type:"reflection", text:"A Lebanese Maronite hermit-monk known for an austere, largely silent life of prayer in a remote mountain monastery.", wiki:"Sharbel_Makhluf", born:"1828", bio:"After his death, reports of miraculous light and healings at his tomb made him one of the most popular saints in the Middle East." },
+  "07-25": { name:"James", title:"Apostle", type:"reflection", text:"One of the inner circle of three apostles closest to Jesus, traditionally believed to have preached in Spain before becoming the first apostle martyred, per Acts 12:2.", wiki:"James,_son_of_Zebedee", born:"1st century", bio:"His traditional burial site at Santiago de Compostela became one of medieval Christendom's three great pilgrimage destinations, alongside Rome and Jerusalem." },
+  "07-26": { name:"Joachim and Anne", title:"Memorial", type:"reflection", text:"Named in early Christian tradition (not the Bible itself) as the parents of Mary, reflecting the Church's instinct to honor the family that raised the mother of Jesus.", wiki:"Saint_Anne", bio:"Devotion to Anne in particular grew widely in the Middle Ages; she's a patron of mothers, grandmothers, and homemakers." },
+  "07-29": { name:"Martha, Mary and Lazarus", title:"Memorial", type:"quote", text:"Lord, if you had been here, my brother would not have died.", source:"Martha to Jesus, John 11:21", wiki:"Lazarus_of_Bethany", born:"1st century", bio:"Siblings from Bethany whose home Jesus regularly visited; Lazarus's raising from death in John's Gospel is one of Jesus's most dramatic recorded miracles." },
+  "07-30": { name:"Peter Chrysologus", title:"Bishop and Doctor of the Church", type:"reflection", text:"Known as 'Chrysologus' — golden-worded — for sermons so concise and vivid that fragments of them survive as some of the best-preserved preaching from the early Church.", wiki:"Peter_Chrysologus", born:"c. 380", bio:"Bishop of Ravenna, his surviving homilies remain valued for their clarity in an era of often dense theological writing." },
+  "08-01": { name:"Alphonsus Liguori", title:"Bishop and Doctor of the Church", type:"quote", text:"He who prays is certainly saved; he who does not pray is certainly damned.", wiki:"Alphonsus_Liguori", born:"1696", bio:"A former lawyer who, after losing his first major case, turned to the priesthood and founded the Redemptorists, writing extensively on moral theology to help ordinary confessors." },
+  "08-02": { name:"Eusebius of Vercelli", title:"Bishop", type:"reflection", text:"An early bishop exiled for years by an Arian emperor for refusing to condemn his fellow orthodox bishop Athanasius.", wiki:"Eusebius_of_Vercelli", born:"c. 283", bio:"Considered the first bishop in the West to combine monastic community life with the secular clergy, a model later widely imitated.", companions:"Shared today with St. Peter Julian Eymard, a 19th-century French priest who founded religious congregations centered on devotion to the Eucharist." },
+  "08-05": { name:"The Dedication of the Basilica of Saint Mary Major", title:"Optional Memorial", type:"reflection", text:"Commemorates Rome's largest Marian church, founded in the 5th century after, by legend, an August snowfall on the Esquiline Hill marked the spot Mary wished it built.", wiki:"Santa_Maria_Maggiore", bio:"The basilica's mosaics are among the oldest surviving large-scale Christian artworks in Rome." },
+  "08-06": { name:"The Transfiguration of the Lord", title:"Feast", type:"quote", text:"This is my Son, the Beloved; listen to him.", source:"Matthew 17:5", wiki:null, bio:"Recalls the moment Peter, James, and John saw Jesus transfigured in radiant light on a mountain, accompanied by Moses and Elijah." },
+  "08-07": { name:"Sixtus II and Companions", title:"Martyrs", type:"reflection", text:"A pope beheaded with several deacons in 258 while celebrating Mass in the catacombs during a renewed Roman persecution.", wiki:"Pope_Sixtus_II", bio:"His martyrdom is commemorated in the Roman Canon of the Mass alongside the earliest popes.", companions:"Shared today with St. Cajetan, an Italian priest who co-founded a religious order and pioneered charitable pawnshops to protect the poor from loan sharks." },
+  "08-08": { name:"Dominic", title:"Priest", type:"quote", text:"Have charity, guard humility, and possess voluntary poverty.", source:"his deathbed counsel to the friars, 1221", wiki:"Dominic_de_Guzmán", born:"1170", bio:"A Spanish priest who founded the Dominican order to combat heresy through preaching grounded in study, concluding that persuasion, not force, would win back heretics." },
+  "08-10": { name:"Lawrence", title:"Deacon and Martyr", type:"quote", text:"Turn me over; I'm done on this side.", source:"traditionally attributed, said from the gridiron", wiki:"Lawrence_of_Rome", bio:"A deacon martyred in Rome in 258, his cheerful defiance even under torture made him one of the most popular martyrs of the early Church." },
+  "08-12": { name:"Jane Frances de Chantal", title:"Religious", type:"reflection", text:"A French widow and mother of four who, guided by St. Francis de Sales, founded the Visitation Order for women not strong enough for the era's strict cloistered orders.", wiki:"Jane_Frances_de_Chantal", born:"1572", bio:"She balanced raising her children with religious life, later seeing two of her grandchildren also become notable figures in French history." },
+  "08-13": { name:"Pontian and Hippolytus", title:"Martyrs", type:"reflection", text:"A pope and a rival theologian who had once opposed each other so fiercely that Hippolytus was considered an antipope — until both were exiled together to the same Sardinian mines, where they reconciled before dying.", wiki:"Hippolytus_of_Rome", bio:"Their reconciliation in shared suffering is remembered as a powerful image of unity restored.", companions:"Shared today with St. Maximus the Confessor, a Byzantine monk who had his tongue and right hand cut off for refusing to compromise on the doctrine of Christ's two wills." },
+  "08-16": { name:"Stephen of Hungary", title:"Optional Memorial", type:"reflection", text:"Hungary's first Christian king, crowned with a crown reputedly sent by the pope, who built churches and monasteries across the kingdom and organized its diocesan structure.", wiki:"Stephen_I_of_Hungary", born:"c. 975", bio:"Considered the founder of the Hungarian state as a Christian nation; his right hand is preserved as a relic in Budapest's St. Stephen's Basilica." },
+  "08-19": { name:"John Eudes", title:"Priest", type:"reflection", text:"A French priest who, after years as a popular missionary preacher, founded congregations dedicated to better priestly formation and to helping women leave prostitution.", wiki:"John_Eudes", born:"1601", bio:"He helped popularize devotion to the Sacred Heart of Jesus and the Heart of Mary, decades before it became widespread." },
+  "08-20": { name:"Bernard", title:"Abbot and Doctor of the Church", type:"reflection", text:"A Cistercian abbot whose preaching tours and letters made him the most influential churchman of his era, advising five popes and helping settle a papal schism.", wiki:"Bernard_of_Clairvaux", born:"1090", bio:"Founder of the Clairvaux monastery, he was a major force behind the rapid expansion of the Cistercian reform across Europe." },
+  "08-21": { name:"Pius X", title:"Pope", type:"quote", text:"To restore all things in Christ.", source:"his papal motto, from Ephesians 1:10", wiki:"Pope_Pius_X", born:"1835", bio:"A pope of humble peasant origin, he lowered the age for First Communion and resisted theological modernism, later canonized for his personal simplicity and pastoral focus." },
+  "08-22": { name:"The Queenship of the Blessed Virgin Mary", title:"Memorial", type:"reflection", text:"Established in 1954 by Pope Pius XII, eight days after the Assumption, to honor Mary's traditional title as Queen of Heaven.", wiki:null, bio:"The feast deliberately follows the Assumption, reflecting the belief that Mary's heavenly queenship flows from her unique role as mother of Christ the King." },
+  "08-23": { name:"Rose of Lima", title:"Virgin", type:"reflection", text:"The first person born in the Americas to be canonized, she practiced extreme penances and cared for the sick and poor of colonial Lima from a small hut in her family's garden.", wiki:"Rose_of_Lima", born:"1586", bio:"Patroness of Peru and all of Latin America, her feast became an early symbol of the New World's own claim to sanctity, independent of Europe." },
+  "08-24": { name:"Bartholomew", title:"Apostle", type:"reflection", text:"Likely identical to Nathanael, whom Jesus called 'an Israelite in whom there is no deceit' in John's Gospel; tradition holds he was flayed alive while preaching in Armenia.", wiki:"Bartholomew_the_Apostle", born:"1st century", bio:"His gruesome traditional martyrdom made him a popular subject in Renaissance art, including Michelangelo's self-portrait painted onto Bartholomew's flayed skin in the Sistine Chapel." },
+  "08-25": { name:"Louis", title:"Optional Memorial", type:"reflection", text:"A French king who personally administered justice under an oak tree to ensure ordinary subjects had access to him, and who led two Crusades, dying of dysentery during the second.", wiki:"Louis_IX_of_France", born:"1214", bio:"Widely regarded as the medieval ideal of a just Christian ruler, he's the only French king ever canonized.", companions:"Shared today with St. Joseph Calasanz, who founded Europe's first free public schools for poor children in 16th-century Rome." },
+  "08-27": { name:"Monica", title:"Memorial", type:"quote", text:"Lay this body anywhere; only do not let it be far from your mind.", source:"her dying words, recorded by her son Augustine in his Confessions", wiki:"Monica_of_Hippo", born:"331", bio:"Mother of St. Augustine, she prayed and wept for her wayward son's conversion for nearly two decades before finally seeing it happen, just months before her own death." },
+  "08-29": { name:"The Passion of Saint John the Baptist", title:"Memorial", type:"reflection", text:"Commemorates John the Baptist's beheading at the order of King Herod Antipas, after Herod's stepdaughter requested his head as a reward for her dancing.", wiki:"John_the_Baptist", bio:"His death is recounted in Mark 6 and Matthew 14 as the price of John's public condemnation of Herod's unlawful marriage." },
+  "09-05": { name:"Teresa of Calcutta", title:"Religious", type:"quote", text:"We can do no great things, only small things with great love.", wiki:"Mother_Teresa", born:"1910", bio:"An Albanian-born nun who spent nearly five decades serving the poorest of the poor in Kolkata, India, founding the Missionaries of Charity and winning the Nobel Peace Prize in 1979." },
+  "09-08": { name:"The Nativity of the Blessed Virgin Mary", title:"Feast", type:"reflection", text:"Celebrates Mary's birth, a date not recorded in Scripture but observed since at least the 6th century, traditionally nine months after the Immaculate Conception feast on December 8.", wiki:"Nativity_of_Mary", bio:"Early Christian tradition, drawn from non-biblical writings, names her parents as Joachim and Anne." },
+  "09-09": { name:"Peter Claver", title:"Priest", type:"quote", text:"The slave of the slaves, forever.", source:"how he described himself", wiki:"Peter_Claver", born:"1580", bio:"A Spanish Jesuit who spent over 40 years in Cartagena, Colombia, ministering to enslaved Africans as they arrived by the thousands, baptizing and caring for an estimated 300,000 people." },
+  "09-12": { name:"The Most Holy Name of Mary", title:"Optional Memorial", type:"reflection", text:"Honors the name 'Mary,' added to the General Roman Calendar to commemorate a 1683 military victory at Vienna attributed to her intercession.", wiki:null, bio:"The feast pairs thematically with the Holy Name of Jesus, celebrated each January." },
+  "09-13": { name:"John Chrysostom", title:"Bishop and Doctor of the Church", type:"reflection", text:"Exiled twice by the imperial court of Constantinople for publicly criticizing the excesses of the wealthy and the empress herself, he died from the harsh conditions of his final exile march.", wiki:"John_Chrysostom", born:"c. 347", bio:"Patriarch of Constantinople, his nickname 'Chrysostom' — golden-mouthed — reflects his renown as the greatest preacher of the early Eastern Church." },
+  "09-14": { name:"The Exaltation of the Holy Cross", title:"Feast", type:"reflection", text:"Commemorates the 4th-century discovery of the True Cross by St. Helena, mother of Emperor Constantine, in Jerusalem, and its later recovery after a Persian invasion.", wiki:null, bio:"One of the oldest feasts on the calendar, it shifts the Church's symbol of the cross from instrument of execution to sign of victory." },
+  "09-15": { name:"Our Lady of Sorrows", title:"Memorial", type:"quote", text:"And a sword will pierce your soul.", source:"Simeon's prophecy to Mary, Luke 2:35", wiki:null, bio:"Honors Mary's suffering throughout Christ's life, traditionally enumerated as the Seven Sorrows, from Simeon's prophecy to standing at the foot of the cross." },
+  "09-16": { name:"Cornelius and Cyprian", title:"Martyrs", type:"reflection", text:"A pope and a North African bishop who corresponded and allied against a movement that wanted to permanently exclude Christians who had lapsed under persecution; both were later martyred themselves.", wiki:"Cyprian", bio:"Cyprian's writings on church unity and Cornelius's brief, contested papacy both played out against the backdrop of recurring Roman persecution." },
+  "09-17": { name:"Robert Bellarmine", title:"Bishop and Doctor of the Church", type:"reflection", text:"A Jesuit cardinal and theologian who served on the commission that investigated Galileo, while also writing influential catechisms still used centuries later.", wiki:"Robert_Bellarmine", born:"1542", bio:"His careful, methodical defenses of Catholic doctrine made him one of the Counter-Reformation's most respected theologians.", companions:"Shared today with St. Hildegard of Bingen, a German Benedictine abbess, composer, and visionary whose writings on theology, medicine, and natural science were extraordinary for a 12th-century woman." },
+  "09-19": { name:"Januarius", title:"Bishop and Martyr", type:"reflection", text:"A bishop martyred in Italy around 305, whose dried blood, kept in a vial in Naples, is reported to liquefy on his feast day — a phenomenon investigated but never definitively explained.", wiki:"Januarius", bio:"The annual 'miracle of San Gennaro' remains one of the most famous unexplained Catholic relics, drawing crowds to Naples Cathedral each September." },
+  "09-20": { name:"Andrew Kim Tae-gon and Companions", title:"Martyrs", type:"reflection", text:"Korea's first native-born priest, ordained in secret, who was tortured and beheaded in 1846 at age twenty-five, just over a year into his ministry.", wiki:"Andrew_Kim_Taegŏn", born:"1821", bio:"Honored alongside lay catechist Paul Chong Ha-sang and over a hundred other Korean martyrs killed across the 19th century, a period when Catholicism was banned outright in Korea." },
+  "09-21": { name:"Matthew", title:"Apostle and Evangelist", type:"reflection", text:"A tax collector for the Roman occupation — one of the most despised professions among Jews of his time — who left his post the moment Jesus said 'Follow me.'", wiki:"Matthew_the_Apostle", born:"1st century", bio:"Traditionally credited with writing the first Gospel, which presents Jesus's teaching with a particular eye to fulfillment of Hebrew prophecy." },
+  "09-23": { name:"Pius of Pietrelcina", title:"Priest", type:"quote", text:"Pray, hope, and don't worry.", wiki:"Padre_Pio", born:"1887", bio:"An Italian Capuchin friar known as Padre Pio, who reportedly bore the wounds of Christ's stigmata for fifty years and spent up to 19 hours a day hearing confessions." },
+  "09-26": { name:"Cosmas and Damian", title:"Optional Memorial", type:"reflection", text:"Twin brothers and physicians in Roman Syria who treated patients for free before being martyred under Diocletian.", wiki:"Cosmas_and_Damian", bio:"Patrons of physicians and surgeons, their cult was so popular that several early popes built churches in their honor in Rome and Constantinople." },
+  "09-28": { name:"Wenceslaus", title:"Martyr", type:"reflection", text:"A 10th-century Duke of Bohemia murdered by his own brother in a succession dispute, remembered for his piety and care for the poor — the same figure behind the carol 'Good King Wenceslas.'", wiki:"Wenceslaus_I,_Duke_of_Bohemia", born:"c. 907", bio:"Patron saint of the Czech state, his death made him an early symbol of Bohemian Christian identity.", companions:"Shared today with St. Lawrence Ruiz, a Filipino layman martyred in Japan in 1637 — the first Filipino saint." },
+  "09-29": { name:"Michael, Gabriel, and Raphael", title:"Archangels", type:"quote", text:"Hail, favored one! The Lord is with you.", source:"the Angel Gabriel to Mary, Luke 1:28", wiki:"Archangel", bio:"The only three angels named in the Bible: Michael the warrior-protector, Gabriel the divine messenger, and Raphael the healer of the Book of Tobit." },
+  "10-02": { name:"The Holy Guardian Angels", title:"Memorial", type:"reflection", text:"Reflects the long-standing Christian belief, rooted in passages like Psalm 91 and Matthew 18:10, that each person is accompanied by a guardian angel throughout life.", wiki:null, bio:"Devotion to guardian angels became especially popular in the Middle Ages and remains a staple of children's religious education today." },
+  "10-05": { name:"Faustina Kowalska", title:"Virgin", type:"quote", text:"Jesus, I trust in You.", wiki:"Faustina_Kowalska", born:"1905", bio:"A Polish nun whose reported visions of Jesus as the 'Divine Mercy' inspired a devotion that fellow Pole Pope John Paul II later spread worldwide, including establishing Divine Mercy Sunday." },
+  "10-06": { name:"Bruno", title:"Priest", type:"reflection", text:"A renowned theology teacher who abruptly left a promising academic career to live as a hermit in the French Alps, founding the famously austere and silent Carthusian order.", wiki:"Bruno_of_Cologne", born:"c. 1030", bio:"Carthusian monks still follow a rule of near-total silence and solitude inspired by his original community at the Grande Chartreuse — also the origin of the liqueur's name." },
+  "10-07": { name:"Our Lady of the Rosary", title:"Memorial", type:"reflection", text:"Established to commemorate a 1571 naval victory at the Battle of Lepanto, credited by Pope Pius V to Christians praying the Rosary across Europe that day.", wiki:null, bio:"The Rosary itself, a repeated cycle of prayers on events in the lives of Jesus and Mary, is traditionally associated with St. Dominic, though its present form developed gradually over centuries." },
+  "10-09": { name:"Denis and Companions", title:"Martyrs", type:"reflection", text:"The legendary first bishop of Paris, beheaded around 250 — according to later legend, he then picked up his own severed head and walked some distance while preaching.", wiki:"Saint_Denis", bio:"Patron saint of France, the Paris suburb of Saint-Denis and its royal abbey are named for him.", companions:"Shared today with St. John Leonardi, an Italian priest-reformer, and St. John Henry Newman, the 19th-century English convert and theologian canonized in 2019." },
+  "10-11": { name:"John XXIII", title:"Pope", type:"quote", text:"I want to throw open the windows of the Church so that we can see out and the people can see in.", source:"said of his reasons for convening the Second Vatican Council", wiki:"Pope_John_XXIII", born:"1881", bio:"An Italian pope elected at 76 as a presumed caretaker, he instead called the Second Vatican Council, one of the most transformative events in modern Catholic history." },
+  "10-14": { name:"Callistus I", title:"Pope and Martyr", type:"reflection", text:"A former slave who became pope around 217, controversially extending forgiveness and re-admission to Christians who had committed serious sins.", wiki:"Pope_Callixtus_I", bio:"He was reportedly martyred during a local Roman riot, his body thrown down a well." },
+  "10-16": { name:"Hedwig", title:"Religious", type:"reflection", text:"A German duchess who, widowed after raising seven children, gave away her wealth and retired to a convent she had founded, living out her final years in voluntary poverty.", wiki:"Hedwig_of_Silesia", born:"1174", bio:"Patroness of Silesia, she's remembered for personally tending lepers despite her royal status.", companions:"Shared today with St. Margaret Mary Alacoque, a French nun whose 17th-century visions of Christ's Sacred Heart launched the devotion now marked worldwide each June." },
+  "10-17": { name:"Ignatius of Antioch", title:"Bishop and Martyr", type:"quote", text:"I am God's wheat, and I am being ground by the teeth of wild beasts that I may become the pure bread of Christ.", source:"his Letter to the Romans, written en route to his execution", wiki:"Ignatius_of_Antioch", born:"1st century", bio:"Bishop of Antioch and likely a direct disciple of the Apostle John, his seven surviving letters are among Christianity's earliest writings outside the New Testament." },
+  "10-18": { name:"Luke", title:"Evangelist", type:"reflection", text:"A Gentile physician and historian who traveled extensively with Paul, writing both a Gospel and the Acts of the Apostles — together the longest portion of the New Testament by any single author.", wiki:"Luke_the_Evangelist", born:"1st century", bio:"Tradition also credits him as an early icon painter; he's patron of physicians, artists, and surgeons." },
+  "10-19": { name:"John de Brébeuf, Isaac Jogues and Companions", title:"Martyrs", type:"reflection", text:"French Jesuit missionaries to North America's Huron and Iroquois peoples, several of them tortured to death during conflicts between rival Native nations in the 1640s.", wiki:"Jean_de_Brébeuf", bio:"Known as the North American Martyrs, their missions in present-day Canada and New York State are now major pilgrimage and historical sites.", companions:"Shared today with St. Paul of the Cross, an 18th-century Italian priest who founded the Passionists, focused on devotion to Christ's suffering." },
+  "10-23": { name:"John of Capistrano", title:"Priest", type:"reflection", text:"A Franciscan friar and former lawyer who, in his seventies, personally helped rally Christian forces at the 1456 Siege of Belgrade against an Ottoman invasion.", wiki:"John_of_Capistrano", born:"1386", bio:"Known as the 'Soldier Saint' for his battlefield preaching, he died of plague just months after the siege's unlikely victory." },
+  "10-24": { name:"Anthony Mary Claret", title:"Bishop", type:"reflection", text:"A Spanish priest and prolific writer who, as Archbishop of Cuba, survived an assassination attempt with a knife slash to the face before later founding the Claretian missionary order.", wiki:"Anthony_Mary_Claret", born:"1807", bio:"He's said to have preached over 25,000 sermons and published more than 200 books and pamphlets in his lifetime." },
+  "10-28": { name:"Simon and Jude", title:"Apostles", type:"reflection", text:"Two of the lesser-documented Twelve Apostles, traditionally believed to have been martyred together on a joint mission to Persia.", wiki:"Jude_the_Apostle", born:"1st century", bio:"Jude is widely invoked today as the patron of desperate or hopeless causes, a devotion that grew enormously in the 20th century." },
+  "11-04": { name:"Charles Borromeo", title:"Bishop", type:"reflection", text:"As Archbishop of Milan during the plague of 1576, he stayed in the city to personally minister to the sick and dying when many wealthier residents fled.", wiki:"Charles_Borromeo", born:"1538", bio:"A key implementer of the Council of Trent's reforms, he reorganized seminaries and pioneered the systematic religious education now known as Sunday school." },
+  "11-09": { name:"The Dedication of the Lateran Basilica", title:"Feast", type:"reflection", text:"Commemorates Rome's cathedral church, the Basilica of St. John Lateran — not St. Peter's — which holds the official seat of the Bishop of Rome, the pope.", wiki:"Lateran_Basilica", bio:"Dedicated in the 4th century under Constantine, it predates St. Peter's Basilica and remains, technically, the highest-ranking church in the Catholic world." },
+  "11-10": { name:"Leo the Great", title:"Pope and Doctor of the Church", type:"reflection", text:"Pope during the collapse of Roman authority in the West, he is credited with personally persuading Attila the Hun to turn back from invading Rome in 452.", wiki:"Pope_Leo_I", born:"c. 400", bio:"His Tome on the dual natures of Christ shaped the Council of Chalcedon's defining statement on Christ's divinity and humanity." },
+  "11-11": { name:"Martin of Tours", title:"Bishop", type:"reflection", text:"A Roman soldier who, as a young man, cut his military cloak in half to share with a freezing beggar — then dreamed that night that the beggar was Christ himself.", wiki:"Martin_of_Tours", born:"c. 316", bio:"He went on to become a reluctant bishop of Tours, founding one of the West's earliest monasteries; his cloak-sharing became one of medieval Europe's most depicted images of charity." },
+  "11-12": { name:"Josaphat", title:"Bishop and Martyr", type:"reflection", text:"A bishop who worked to reunite the Ukrainian Eastern Church with Rome while preserving its own Byzantine traditions, a cause that made him deeply unpopular with opponents of the union.", wiki:"Josaphat_Kuntsevych", born:"1580", bio:"He was murdered by an anti-union mob in Vitebsk in 1623, struck with an axe and thrown into a river." },
+  "11-15": { name:"Albert the Great", title:"Bishop and Doctor of the Church", type:"reflection", text:"A Dominican friar and polymath who taught and mentored Thomas Aquinas, writing extensively on subjects ranging from theology to botany, mineralogy, and astronomy.", wiki:"Albertus_Magnus", born:"c. 1200", bio:"Often called the 'Universal Doctor' for the breadth of his learning, he's a patron saint of scientists." },
+  "11-16": { name:"Margaret of Scotland", title:"Optional Memorial", type:"reflection", text:"An English-born queen of Scotland who used her position to reform church practices, ransom prisoners, and personally feed orphans each morning before her own breakfast.", wiki:"Margaret_of_Scotland", born:"c. 1045", bio:"Patron saint of Scotland, she balanced raising eight children with an active program of charitable works throughout her reign.", companions:"Shared today with St. Gertrude the Great, a German Benedictine mystic whose visions and writings on the Sacred Heart influenced later Catholic devotional life." },
+  "11-18": { name:"The Dedication of the Basilicas of Saints Peter and Paul", title:"Optional Memorial", type:"reflection", text:"Commemorates the dedication of Rome's two great basilicas built over the traditional burial sites of Peter and Paul.", wiki:"St._Peter's_Basilica", bio:"The current St. Peter's Basilica, completed in the 17th century, replaced an earlier 4th-century church built by Constantine on the same spot." },
+  "11-21": { name:"The Presentation of the Blessed Virgin Mary", title:"Memorial", type:"reflection", text:"Draws on an early non-biblical tradition that Mary's parents, Joachim and Anne, brought her to the Temple as a young child to be raised in its service.", wiki:null, bio:"The feast has ancient roots in Eastern Christianity before spreading to the West." },
+  "11-23": { name:"Clement I", title:"Pope and Martyr", type:"reflection", text:"A successor of Peter as bishop of Rome whose surviving Letter to the Corinthians, urging unity after a local church dispute, is one of the oldest Christian documents outside the New Testament.", wiki:"Pope_Clement_I", born:"1st century", bio:"Tradition holds he was exiled to the Crimea and martyred by being thrown into the sea tied to an anchor.", companions:"Shared today with St. Columban, an Irish monk whose missionary journeys helped found monasteries across France, Switzerland, and Italy." },
+  "11-24": { name:"Andrew Dung-Lac and Companions", title:"Martyrs", type:"reflection", text:"A Vietnamese priest martyred by beheading in 1839, honored together with well over a hundred other Vietnamese Catholics killed across three centuries of intermittent persecution.", wiki:"Andrew_Dung-Lac", born:"1795", bio:"Vietnam's history of Catholic martyrdom is among the most extensive of any nation, with this joint feast recognizing victims from the 17th through 19th centuries." },
+  "11-25": { name:"Catherine of Alexandria", title:"Optional Memorial", type:"reflection", text:"A legendary Egyptian noblewoman said to have debated and converted pagan philosophers sent to refute her faith, before being martyred on a spiked wheel — origin of the 'Catherine wheel' firework and torture device.", wiki:"Catherine_of_Alexandria", bio:"One of medieval Europe's most popular saints despite scant historical evidence for her existence; Joan of Arc reported hearing her voice among those guiding her." },
+  "11-30": { name:"Andrew", title:"Apostle", type:"quote", text:"We have found the Messiah.", source:"Andrew to his brother Simon Peter, John 1:41", wiki:"Andrew_the_Apostle", born:"1st century", bio:"The first apostle called by Jesus, according to John's Gospel, he's traditionally said to have been martyred on an X-shaped cross — now known as a 'St. Andrew's cross.' Patron of Scotland." },
+  "12-04": { name:"John Damascene", title:"Priest and Doctor of the Church", type:"quote", text:"I do not worship matter, I worship the God of matter.", source:"from his writings defending the veneration of icons", wiki:"John_of_Damascus", born:"c. 675", bio:"A Syrian monk who wrote the era's most thorough defense of religious images during the Byzantine Iconoclasm controversy." },
+  "12-07": { name:"Ambrose", title:"Bishop and Doctor of the Church", type:"reflection", text:"As bishop of Milan, he refused Communion to the Roman Emperor Theodosius until the emperor publicly repented for ordering a massacre — one of history's earliest assertions of the Church's moral authority over civil rulers.", wiki:"Ambrose", born:"c. 340", bio:"He baptized Augustine of Hippo and is credited with popularizing congregational hymn-singing in the West." },
+  "12-08": { name:"The Immaculate Conception of the Blessed Virgin Mary", title:"Solemnity", type:"reflection", text:"Defined as dogma by Pope Pius IX in 1854, the feast holds that Mary was conceived free of original sin from the very first moment of her existence.", wiki:null, bio:"The dogma doesn't refer to Jesus's conception, a common misunderstanding, but to Mary's own conception by her parents." },
+  "12-09": { name:"Juan Diego Cuauhtlatoatzin", title:"Optional Memorial", type:"quote", text:"Am I not here, I who am your Mother?", source:"words reported from the Our Lady of Guadalupe apparitions, 1531", wiki:"Juan_Diego", born:"c. 1474", bio:"An indigenous Aztec convert in Mexico whose reported visions of Mary, and the image said to have miraculously appeared on his cloak, made Our Lady of Guadalupe the most venerated image in the Americas." },
+  "12-10": { name:"Our Lady of Loreto", title:"Optional Memorial", type:"reflection", text:"Honors a house in Loreto, Italy, venerated since the Middle Ages as the relocated childhood home of Mary, reportedly transported there from Nazareth.", wiki:"Sanctuary_of_the_Holy_House", bio:"Now a major pilgrimage site, legends of the house's miraculous flight made Loreto a traditional patron site for aviators." },
+  "12-11": { name:"Damasus I", title:"Pope", type:"reflection", text:"As pope, he commissioned St. Jerome to produce a single, standardized Latin translation of the Bible — the project that became the Vulgate.", wiki:"Pope_Damasus_I", born:"c. 305", bio:"He also helped establish Latin, rather than Greek, as the Church's primary liturgical language in Rome." },
+  "12-12": { name:"Our Lady of Guadalupe", title:"Optional Memorial", type:"reflection", text:"Commemorates the image of Mary said to have appeared on Juan Diego's cloak in 1531, now enshrined in Mexico City's Basilica of Guadalupe, one of the most-visited Catholic shrines in the world.", wiki:"Our_Lady_of_Guadalupe", bio:"Mary is reported to have appeared as a mestiza woman, resonating deeply with Mexico's mixed indigenous and Spanish population at a pivotal moment of evangelization." },
+  "12-13": { name:"Lucy", title:"Virgin and Martyr", type:"reflection", text:"A Sicilian martyr whose legend, like several early virgin-martyrs, centers on refusing a forced marriage and pagan sacrifice under Diocletian's persecution.", wiki:"Lucy_of_Syracuse", born:"c. 283", bio:"Her name, meaning 'light,' made her especially associated with light in Scandinavian winter solstice customs, where her feast remains a major celebration today." },
+  "12-21": { name:"Peter Canisius", title:"Priest and Doctor of the Church", type:"reflection", text:"A Dutch Jesuit whose catechism, written in clear question-and-answer form, became one of the most widely used religious textbooks in Counter-Reformation Europe.", wiki:"Peter_Canisius", born:"1521", bio:"He helped rebuild Catholic education across German-speaking lands after the Reformation's upheavals." },
+  "12-23": { name:"John of Kanty", title:"Priest", type:"reflection", text:"A Polish university professor and priest renowned for giving away his own meals and clothing to the poor, sometimes returning home without his coat in winter.", wiki:"John_of_Kanty", born:"1390", bio:"Despite his learning, he was known above all for personal humility, reportedly refusing better treatment even when he could have claimed it by rank." },
+  "12-27": { name:"John", title:"Apostle and Evangelist", type:"quote", text:"God is love.", source:"1 John 4:8", wiki:"John_the_Apostle", born:"1st century", bio:"Traditionally the youngest apostle and the only one believed to have died of natural causes, he's credited with the Fourth Gospel, three epistles, and the Book of Revelation." },
+  "12-28": { name:"The Holy Innocents", title:"Feast", type:"reflection", text:"Commemorates the children of Bethlehem killed by King Herod's order, recorded in Matthew's Gospel, after he learned of a newborn 'king of the Jews.'", wiki:null, bio:"The Church counts these children as the earliest Christian martyrs, killed for a faith they never had the chance to profess." },
+  "12-29": { name:"Thomas Becket", title:"Bishop and Martyr", type:"quote", text:"I am ready to die for my Lord, that in my blood the Church may obtain liberty and peace.", source:"said moments before his murder, Canterbury Cathedral, 1170", wiki:"Thomas_Becket", born:"1119", bio:"An Archbishop of Canterbury murdered by knights of King Henry II after a bitter dispute over the Church's independence from royal control — a killing that shocked Europe and made Canterbury a major pilgrimage site, later depicted in Chaucer's Canterbury Tales." },
+  "12-31": { name:"Sylvester I", title:"Pope", type:"reflection", text:"Pope during the reign of Constantine, traditionally credited (though largely legendarily) with baptizing the emperor and benefiting from his new tolerance of Christianity after centuries of persecution.", wiki:"Pope_Sylvester_I", bio:"His nearly twenty-two-year papacy, one of the longest in early Church history, oversaw Christianity's transition from persecuted minority to favored imperial religion." },
+  "01-04": { name:"Elizabeth Ann Seton", title:"Religious", type:"reflection", text:"The first native-born American to be canonized, she converted from Episcopalianism, was widowed with five children, and founded the first American parochial school and the Sisters of Charity.", wiki:"Elizabeth_Ann_Seton", born:"1774", bio:"Her school in Emmitsburg, Maryland, became the seed of the American Catholic parochial school system." },
+  "01-05": { name:"John Neumann", title:"Bishop", type:"reflection", text:"A Czech immigrant who became Bishop of Philadelphia and built nearly a hundred Catholic schools in four years — more than any American bishop before him.", wiki:"John_Neumann", born:"1811", bio:"The first American bishop to be canonized and patron of Catholic education in the United States." },
+  "01-08": { name:"Apollinaris of Hierapolis", title:"Bishop", type:"reflection", text:"A 2nd-century bishop and early Christian apologist who addressed a defence of the faith directly to Emperor Marcus Aurelius.", wiki:null, born:"2nd century", bio:"His writings are largely lost but were cited by later Church historians as among the most important of the Apologist era." },
+  "01-09": { name:"Adrian III", title:"Pope", type:"reflection", text:"A 9th-century pope who died while travelling to attend an imperial diet convened to address the succession crisis threatening the Carolingian empire.", wiki:"Pope_Adrian_III", bio:"He reigned for just over a year; a legend that he fed grain from the papal stores to Romans during a famine contributed to his veneration." },
+  "01-10": { name:"Gregory of Nyssa", title:"Bishop and Doctor of the Church", type:"reflection", text:"A younger brother of Basil the Great and a profound mystical theologian whose writings on the soul's infinite journey toward God influenced both Eastern and Western Christian spirituality.", wiki:"Gregory_of_Nyssa", born:"c. 335", bio:"One of the Cappadocian Fathers, his theological development of the Trinity helped finalise what would become Nicene orthodoxy." },
+  "01-11": { name:"Theodosius the Cenobiarch", title:"Abbot", type:"reflection", text:"A 5th-century monk from Cappadocia who established a large monastery near Bethlehem where monks of different nationalities celebrated the liturgy each in their own language.", wiki:"Theodosius_the_Cenobiarch", born:"423", bio:"Called the 'Cenobiarch' — head of communal monks — he is considered the founder of organised communal monasticism in Palestine." },
+  "01-12": { name:"Marguerite Bourgeoys", title:"Religious", type:"reflection", text:"A French nun who sailed to colonial Canada in 1653 and founded both the first school and the first non-cloistered teaching order in what is now Montreal.", wiki:"Marguerite_Bourgeoys", born:"1620", bio:"She built the first stone chapel in Montreal, still preserved today, and is canonised as the first female saint of Canada." },
+  "01-14": { name:"Sava of Serbia", title:"Bishop", type:"reflection", text:"A Serbian prince who renounced his inheritance, became a monk on Mount Athos, and later organised the Serbian Orthodox Church as its first archbishop.", wiki:"Saint_Sava", born:"1175", bio:"Revered in the Orthodox Church as the patron saint of Serbia, he negotiated autocephaly for the Serbian Church from Constantinople in 1219." },
+  "01-15": { name:"Paul the First Hermit", title:"Hermit", type:"reflection", text:"Traditionally the very first Christian hermit, who fled Roman persecution as a young man and reportedly lived alone in the Egyptian desert for over ninety years.", wiki:"Paul_of_Thebes", born:"c. 227", bio:"St. Jerome wrote his biography and described how Anthony the Great visited him near the end of his life, with a raven delivering bread for them both." },
+  "01-16": { name:"Marcellus I", title:"Pope and Martyr", type:"reflection", text:"A pope whose brief tenure was torn apart by the Diocletianic persecution, which forced him to decide how to treat Christians who had handed over scriptures to avoid execution.", wiki:"Pope_Marcellus_I", bio:"He is counted among the martyrs; the chaos of his papacy contributed directly to a new church law requiring bishops to govern more carefully even under persecution." },
+  "01-18": { name:"Beginning of the Week of Prayer for Christian Unity", title:"Observance", type:"reflection", text:"Observed annually from 18 to 25 January, these eight days of prayer bring together Christians of different traditions to pray for the visible unity of the Church.", wiki:null, bio:"The week was proposed in 1908 by an American Episcopalian priest and later adopted by the Vatican, which now co-sponsors it with the World Council of Churches." },
+  "01-19": { name:"Sts Marius, Martha, Audifax and Abachum", title:"Martyrs", type:"reflection", text:"A Persian nobleman and his family — his wife Martha and their two sons — who travelled to Rome on pilgrimage, were arrested while burying the bodies of martyrs, and were executed themselves.", wiki:null, bio:"Among the earliest recorded group martyrdoms in Rome, they are venerated in both Eastern and Western calendars." },
+  "01-23": { name:"Ildefonsus of Toledo", title:"Bishop", type:"reflection", text:"A 7th-century Archbishop of Toledo whose devotion to the Virgin Mary and treatise defending her perpetual virginity became one of the most influential Marian texts of the early Middle Ages.", wiki:"Ildefonsus_of_Toledo", born:"c. 607", bio:"A deeply learned bishop who presided over several Church councils in Visigothic Spain." },
+  "01-29": { name:"Gildas the Wise", title:"Monk", type:"reflection", text:"A 6th-century British monk whose work On the Ruin and Conquest of Britain is the only substantial surviving literary source for sub-Roman Britain after the Roman withdrawal.", wiki:"Gildas", born:"c. 500", bio:"Writing with the fury of an Old Testament prophet, he blamed the Anglo-Saxon invasions on the moral failures of British kings and clergy." },
+  "01-30": { name:"Bathild of Chelles", title:"Religious", type:"reflection", text:"An Anglo-Saxon woman sold into slavery in France who became queen after her master's death — and used her royal position to outlaw the slave trade within the Frankish kingdom.", wiki:"Balthild", born:"c. 626", bio:"After her husband's death she retired to the monastery of Chelles, refusing the regency, and died as an ordinary nun." },
+  "02-01": { name:"Brigid of Ireland", title:"Abbess", type:"reflection", text:"One of Ireland's three patron saints, she founded a great double monastery at Kildare whose flame, tended by her nuns, was said to have burned without interruption for centuries.", wiki:"Brigid_of_Kildare", born:"c. 451", bio:"Her feast falls on the ancient Celtic festival of Imbolc, marking the beginning of spring; countless holy wells, crosses, and places across Ireland bear her name." },
+  "02-04": { name:"Andrew Corsini", title:"Bishop", type:"reflection", text:"A Florentine Carmelite bishop of Fiesole who resolved bitter civic disputes and was reportedly so humble that he refused at first to accept episcopal consecration.", wiki:"Andrew_Corsini", born:"1302", bio:"Said to have been dedicated to Our Lady before his birth after his mother dreamed she gave birth to a wolf that became a lamb upon entering a church." },
+  "02-07": { name:"Colette of Corbie", title:"Religious", type:"reflection", text:"A French carpenter's daughter who lived as a hermit before reforming many convents of the Poor Clares, restoring the original strict poverty that Clare of Assisi had prescribed.", wiki:"Colette_of_Corbie", born:"1381", bio:"She founded seventeen reformed convents across France, Savoy, and Flanders, sparking what became known as the Colettine reform." },
+  "02-09": { name:"Apollonia", title:"Martyr", type:"reflection", text:"An aged deaconess of Alexandria who, during a public uprising against Christians, had all her teeth forcibly smashed before being threatened with fire — and walked willingly into the flames rather than deny her faith.", wiki:"Apollonia", bio:"One of the most venerated early martyrs; her patronage of dentists stems from the manner of her torture." },
+  "02-12": { name:"Seven Founders of the Servite Order", title:"Religious", type:"reflection", text:"Seven wealthy Florentine merchants who in 1233 abandoned their businesses together to live in prayer and penance on Monte Senario, founding the Order of Servants of Mary.", wiki:"Seven_Holy_Founders", bio:"Their collective story of renouncing prosperity for religious life made a striking impression on the mercantile culture of 13th-century Florence." },
+  "02-13": { name:"Martinian the Hermit", title:"Hermit", type:"reflection", text:"A Palestinian hermit of the 5th century celebrated for a life of extreme solitude and penance in the wilderness near Caesarea Maritima.", wiki:null, born:"c. 400", bio:"Later generations included his feast in both Eastern and Western martyrologies as a model of the solitary contemplative life." },
+  "02-15": { name:"Sigfrid of Växjö", title:"Bishop", type:"reflection", text:"An English monk sent to evangelise Sweden at the request of its king, who became the first bishop of Växjö and is called the Apostle of Sweden.", wiki:"Sigfrid_of_Sweden", bio:"He is credited with baptising King Olof of Sweden, and remains a patron saint of the country to this day." },
+  "02-16": { name:"Onesimus", title:"Martyr", type:"reflection", text:"An enslaved man mentioned in Paul's letter to Philemon who, by tradition, was eventually freed, became bishop of Ephesus, and was later martyred for his faith.", wiki:"Onesimus", born:"1st century", bio:"Paul's brief letter on his behalf — asking Philemon to receive him 'no longer as a slave, but as a dear brother' — became an early Christian statement on the dignity of every person." },
+  "02-18": { name:"Fra Angelico", title:"Religious", type:"reflection", text:"A Dominican friar and one of the greatest painters of the early Italian Renaissance, who reportedly wept each time he painted the Crucifixion.", wiki:"Fra_Angelico", born:"c. 1395", bio:"His frescoes in the convent of San Marco in Florence, painted as aids to prayer for the resident monks, remain among the most luminous religious artworks ever created." },
+  "02-19": { name:"Conrad of Piacenza", title:"Religious", type:"reflection", text:"An Italian nobleman who accidentally started a forest fire and, when an innocent man was about to be executed for it, confessed his guilt — and then gave away his entire estate to pay compensation and entered religious life.", wiki:"Conrad_of_Piacenza", born:"1290", bio:"He later lived as a hermit in Sicily, where miracles were reported at his tomb almost immediately after his death." },
+  "02-20": { name:"Francisco and Jacinta Marto", title:"Visionaries", type:"reflection", text:"Two Portuguese shepherd children, aged eight and seven, who reported seeing the Virgin Mary at Fátima in 1917 alongside their cousin Lúcia; both died young — Francisco at ten, Jacinta at nine — of influenza.", wiki:"Francisco_and_Jacinta_Marto", born:"1908 (Francisco), 1910 (Jacinta)", bio:"They were canonised together by Pope Francis in 2017, the youngest non-martyrs ever raised to sainthood by the Catholic Church." },
+  "02-24": { name:"Matthias", title:"Apostle", type:"reflection", text:"Chosen by lot to replace Judas among the Twelve, fulfilling Peter's call to restore the full number of apostolic witnesses to the resurrection.", wiki:"Matthias_the_Apostle", born:"1st century", bio:"This was his traditional feast day in the older Roman Calendar; later moved to May 14. Tradition places his missionary work and martyrdom in Judea or Ethiopia." },
+  "02-25": { name:"Tarasius of Constantinople", title:"Bishop", type:"reflection", text:"A Byzantine patriarch who, though a layman when elected, restored veneration of religious icons at the Second Council of Nicaea in 787 after decades of imperial iconoclasm.", wiki:"Tarasius_of_Constantinople", born:"c. 730", bio:"He controversially permitted clergy who had lapsed during the iconoclast period to retain their posts, prioritising healing over punishment." },
+  "02-26": { name:"Porphyry of Gaza", title:"Bishop", type:"reflection", text:"A 5th-century bishop of Gaza who used his connections at the Byzantine imperial court to have the city's last great pagan temples demolished, against fierce local resistance.", wiki:"Porphyry_of_Gaza", born:"c. 347", bio:"His biography, written by his deacon Mark, is one of the most vivid accounts of the tensions between Christianity and traditional religion in late Roman cities." },
+  "02-28": { name:"Hilary of Aquileia", title:"Bishop and Martyr", type:"reflection", text:"An early bishop of Aquileia in northern Italy who was martyred during one of the Roman Empire's persecutions of Christians.", wiki:null, bio:"Aquileia was one of the most important early Christian communities in the Western Roman Empire, ranking alongside Rome and Milan in prestige." },
+  "03-01": { name:"David of Wales", title:"Bishop", type:"reflection", text:"The patron saint of Wales, who founded a monastery of extreme austerity on the western tip of the Welsh coast and became the country's most celebrated religious figure.", wiki:"Saint_David", born:"c. 500", bio:"His last recorded words — 'Do the little things' — remain a beloved motto in Welsh culture; his feast day is marked with daffodils and leeks across Wales." },
+  "03-02": { name:"Chad of Lichfield", title:"Bishop", type:"reflection", text:"An Anglo-Saxon monk trained in the Irish tradition who humbly stepped aside when a dispute arose over his appointment as Bishop of York, and later became Bishop of Lichfield.", wiki:"Chad_of_Lichfield", bio:"Bede praised him as a model bishop who travelled his diocese on foot rather than on horseback, until Archbishop Theodore ordered him to ride for the sake of efficiency." },
+  "03-03": { name:"Katharine Drexel", title:"Religious", type:"reflection", text:"An American heiress who inherited twenty million dollars and gave every cent of it — along with her life — to found schools for African-American and Native American children.", wiki:"Katharine_Drexel", born:"1858", bio:"She founded Xavier University in New Orleans, still the only historically Black Catholic university in the United States." },
+  "03-05": { name:"John Joseph of the Cross", title:"Priest", type:"reflection", text:"An Italian Franciscan friar famed for extreme penances and mystical gifts, including bilocation and the ability to survive for years on the Eucharist alone according to his contemporaries.", wiki:"John_Joseph_of_the_Cross", born:"1654", bio:"He spent much of his ministry reforming the lax discipline of several Franciscan houses in the Kingdom of Naples." },
+  "03-06": { name:"Colette of Corbie", title:"Religious", type:"reflection", text:"A French carpenter's daughter who, after years as a hermit, was commissioned by the pope to reform the Poor Clares, restoring Francis and Clare's original vision of absolute poverty.", wiki:"Colette_of_Corbie", born:"1381", bio:"She founded seventeen new convents and is credited with reviving Franciscan observance across France, Savoy, and Flanders." },
+  "03-10": { name:"Forty Martyrs of Sebaste", title:"Martyrs", type:"reflection", text:"Forty Roman soldiers who were stripped naked and left on a frozen lake in Armenia to die in 320 for refusing to sacrifice to the Roman gods, one of the most celebrated group martyrdoms in the early Church.", wiki:"Forty_Martyrs_of_Sebaste", bio:"One soldier reportedly wavered and ran to the warm bath prepared for those who would apostatise; a guard who witnessed the martyrs' courage converted on the spot and took his place." },
+  "03-11": { name:"Sophronius of Jerusalem", title:"Bishop", type:"reflection", text:"A 7th-century Patriarch of Jerusalem who personally surrendered the city to the Muslim Caliph Omar in 637, negotiating protections for its Christian inhabitants and churches.", wiki:"Sophronius_of_Jerusalem", born:"c. 560", bio:"A strong defender of the orthodox doctrine of Christ's two wills, his tenure saw Jerusalem pass from Byzantine to Islamic rule — one of the defining moments of Church history." },
+  "03-12": { name:"Gregory the Great", title:"Pope and Doctor of the Church", type:"reflection", text:"The pope who sent Augustine to evangelise England, reorganised the Church's care for the poor, and whose liturgical reforms gave the Gregorian Chant its name.", wiki:"Pope_Gregory_I", born:"c. 540", bio:"Celebrated on this date in the older calendar; one of only two popes given the title 'the Great' by popular acclamation." },
+  "03-13": { name:"Euphrasia of Constantinople", title:"Virgin", type:"reflection", text:"A 5th-century Byzantine noblewoman betrothed to a senator who instead chose to enter an Egyptian monastery, eventually persuading the emperor himself to release her from the engagement.", wiki:"Euphrasia_of_Constantinople", born:"c. 380", bio:"Her life story, combining high birth with radical renunciation, made her widely read in both Eastern and Western monastic literature." },
+  "03-14": { name:"Matilda of Germany", title:"Queen", type:"reflection", text:"A 10th-century German queen whose charity to the poor and founding of monasteries won her popular acclaim, despite the hostility of her own sons who objected to how much royal wealth she gave away.", wiki:"Matilda_of_Ringelheim", born:"c. 895", bio:"She outlived her husband Henry I and two of her sons, who later repented of their treatment of her." },
+  "03-15": { name:"Louise de Marillac", title:"Religious", type:"reflection", text:"A French noblewoman who co-founded the Daughters of Charity with Vincent de Paul, creating the first major order of women working openly in hospitals, prisons, and battlefields rather than in a cloister.", wiki:"Louise_de_Marillac", born:"1591", bio:"Her Daughters of Charity became the largest congregation of women religious in the world by the 19th century." },
+  "03-16": { name:"Heribert of Cologne", title:"Bishop", type:"reflection", text:"A 10th-century Archbishop of Cologne who fell out of favour with Holy Roman Emperor Henry II but was widely revered by his people for his generosity and ascetic holiness.", wiki:"Heribert_of_Cologne", born:"c. 970", bio:"He founded the Deutz Abbey near Cologne and gave away large amounts of Church wealth to relieve a widespread famine." },
+  "03-20": { name:"Cuthbert of Lindisfarne", title:"Bishop", type:"reflection", text:"An Anglo-Saxon shepherd-boy who became a monk, then the most beloved bishop in northern England, eventually retiring alone to an island hermitage off the Northumberland coast.", wiki:"Cuthbert_of_Lindisfarne", born:"c. 634", bio:"His undecayed body, discovered eleven years after burial, was carried for over a century by monks fleeing Viking raids, before being enshrined in what became Durham Cathedral." },
+  "03-21": { name:"Nicholas of Flüe", title:"Hermit", type:"reflection", text:"A Swiss soldier, magistrate, and father of ten who at fifty received his family's blessing to become a hermit — and reportedly lived for nineteen years on nothing but the Eucharist.", wiki:"Nicholas_of_Flüe", born:"1417", bio:"His word is credited with preventing civil war in Switzerland in 1481; he is the country's patron saint." },
+  "03-22": { name:"Nicholas Owen", title:"Martyr", type:"reflection", text:"A Jesuit lay brother and carpenter who spent decades ingeniously constructing priest-holes — secret chambers inside English Catholic houses — that saved the lives of hundreds of missionaries during the Elizabethan persecution.", wiki:"Nicholas_Owen", born:"c. 1562", bio:"He was tortured to death at the Tower of London in 1606 without revealing the location of a single hiding place." },
+  "03-24": { name:"Catherine of Sweden", title:"Religious", type:"reflection", text:"The fourth daughter of Bridget of Sweden who accompanied her mother on pilgrimages across Europe, helped secure her canonisation, and led her monastery in Vadstena for many years after Bridget's death.", wiki:"Catherine_of_Sweden", born:"1331", bio:"She was known for her extreme beauty and for consistently turning away powerful suitors who sought her hand after her husband's early death." },
+  "03-26": { name:"Ludger of Münster", title:"Bishop", type:"reflection", text:"A Frisian missionary trained in England under Alcuin who evangelised pagan Saxons along the North Sea coast and became the first Bishop of Münster.", wiki:"Liudger", born:"c. 742", bio:"Known as the Apostle of Saxony, he reportedly replied to Charlemagne's impatience with his slow progress: 'First teach them to believe, and then they will obey.'" },
+  "03-27": { name:"Rupert of Salzburg", title:"Bishop", type:"reflection", text:"A 7th-century Frankish bishop who evangelised the Austrian Alps and founded Salzburg's first monastery, giving the city its earliest Christian institutions.", wiki:"Rupert_of_Salzburg", born:"c. 660", bio:"He is patron saint of Salzburg and of the salt-miners whose trade gave the city its name." },
+  "03-28": { name:"Tutilo of St Gall", title:"Monk", type:"reflection", text:"A 9th-century Swiss Benedictine monk celebrated as a poet, composer, sculptor, painter, metalsmith, and teacher — one of the most versatile artists of the early medieval period.", wiki:null, born:"c. 850", bio:"His musical compositions and carvings survive in fragments at the Abbey of St Gall, one of Europe's great centres of medieval learning." },
+  "03-29": { name:"Gwenael of Brittany", title:"Abbot", type:"reflection", text:"A 6th-century Breton monk, disciple of Gildas, who founded a monastery on a small island before becoming the first bishop of Vannes in Brittany.", wiki:null, born:"6th century", bio:"He is venerated as one of the founding saints of Brittany, a region with a particularly rich tradition of Celtic Christian monasticism." },
+  "03-30": { name:"John Climacus", title:"Abbot", type:"quote", text:"The man who has learned humility has become a stranger to the passions.", source:"The Ladder of Divine Ascent", wiki:"John_Climacus", born:"c. 579", bio:"A monk of Mount Sinai whose Ladder of Divine Ascent, describing thirty steps toward spiritual perfection, remains one of the most widely read works of Eastern Christian spirituality." },
+  "03-31": { name:"Benjamin the Deacon", title:"Martyr", type:"reflection", text:"A Persian deacon arrested for preaching Christianity who endured years of imprisonment and torture before being executed around 424 during the great Persian Christian persecution.", wiki:null, bio:"The persecution under King Yazdegerd II killed thousands of Persian Christians and is commemorated in both Eastern and Western martyrologies." },
+  "04-01": { name:"Hugh of Grenoble", title:"Bishop", type:"reflection", text:"A reluctant French bishop who tried twice to resign his position and retire to a monastery, but was ordered to stay and served for over fifty years, transforming the diocese.", wiki:"Hugh_of_Grenoble", born:"1052", bio:"He welcomed Bruno and his companions to the wilderness valley that became the Grande Chartreuse, birthplace of the Carthusian order." },
+  "04-03": { name:"Richard of Chichester", title:"Bishop", type:"reflection", text:"An English bishop famous for his personal simplicity — reportedly using a wooden cup and plate himself while ensuring his household was generous to the poor.", wiki:"Richard_of_Chichester", born:"c. 1197", bio:"His prayer asking to know Christ more clearly, love him more dearly, and follow him more nearly was later adapted into a famous song from the musical Godspell." },
+  "04-06": { name:"William of Eskill", title:"Abbot", type:"reflection", text:"A French Augustinian monk who settled in Denmark, revived a struggling monastery at Æbelholt, and became one of the most important church reformers in 12th-century Scandinavia.", wiki:null, born:"c. 1125", bio:"His canonisation in 1224 was the first performed specifically for a non-Scandinavian saint living and dying in Scandinavia." },
+  "04-08": { name:"Julie Billiart", title:"Religious", type:"reflection", text:"A French laywoman who suffered a mysterious paralysis for twenty-two years, and whose instantaneous cure during prayer reportedly launched her vocation to found the Sisters of Notre Dame de Namur.", wiki:"Julie_Billiart", born:"1751", bio:"She founded the congregation to educate poor girls, and her order now works in over thirty countries worldwide." },
+  "04-09": { name:"Mary of Cleophas", title:"Disciple", type:"reflection", text:"Named in John's Gospel as one of the women standing at the foot of the Cross alongside Mary the mother of Jesus, she is traditionally identified as the mother of the apostle James the Less.", wiki:null, born:"1st century", bio:"Early tradition venerated her as one of the 'Three Marys' who accompanied Jesus's mother throughout the Passion and to the empty tomb." },
+  "04-10": { name:"Fulbert of Chartres", title:"Bishop", type:"reflection", text:"A French scholar and bishop who rebuilt Chartres Cathedral after fire destroyed it and was one of the most respected teachers and correspondents of early 11th-century Europe.", wiki:"Fulbert_of_Chartres", born:"c. 952", bio:"His school at Chartres attracted students from across Europe and contributed to the intellectual revival that preceded the founding of the great medieval universities." },
+  "04-12": { name:"Julius I", title:"Pope", type:"reflection", text:"A 4th-century pope who firmly defended the exiled Athanasius against Arian pressure, asserting that no Eastern bishop could be deposed without the knowledge and consent of Rome.", wiki:"Pope_Julius_I", bio:"His stance helped establish the principle of Roman primacy in doctrinal disputes — a landmark moment in the development of papal authority." },
+  "04-14": { name:"Lydwine of Schiedam", title:"Virgin", type:"reflection", text:"A Dutch woman who suffered a severe skating accident at fifteen and spent the following thirty-eight years bedridden with worsening illnesses, sustained — according to her contemporaries — by mystical experiences and the Eucharist alone.", wiki:"Lydwine_of_Schiedam", born:"1380", bio:"Patron of the chronically ill and those who suffer, her story became widely known through a biography by the novelist J.-K. Huysmans in the 19th century." },
+  "04-15": { name:"Paternus of Wales", title:"Bishop", type:"reflection", text:"A 6th-century Welsh monk who founded a monastery at Llanbadarn Fawr and became one of the founding fathers of the Welsh Church.", wiki:null, born:"c. 500", bio:"Llanbadarn Fawr — the great parish of Padarn — remained one of the most important ecclesiastical sites in Wales throughout the Middle Ages." },
+  "04-16": { name:"Benedict Joseph Labre", title:"Pilgrim", type:"reflection", text:"A French peasant rejected by multiple religious orders who spent his life as a wandering pilgrim, sleeping rough outside churches and living entirely on alms.", wiki:"Benedict_Joseph_Labre", born:"1748", bio:"When he died outside a Rome church in 1783, the children of the neighbourhood reportedly ran through the streets shouting 'The saint is dead!' — he had become beloved among the city's poor." },
+  "04-17": { name:"Stephen Harding", title:"Abbot", type:"reflection", text:"An English monk who co-founded the Cistercian order in the forests of Burgundy and wrote its founding charter, the Charter of Charity, balancing monastic unity with the autonomy of individual houses.", wiki:"Stephen_Harding", born:"c. 1060", bio:"The Cistercians, under his guidance and later under Bernard of Clairvaux, became the dominant monastic movement of the 12th century." },
+  "04-18": { name:"Apollonius the Apologist", title:"Martyr", type:"reflection", text:"A Roman senator and Christian intellectual executed around 185 under Emperor Commodus, after a servant denounced him; he reportedly delivered a brilliant defence of Christianity before the Senate.", wiki:"Apollonius_the_Apologist", bio:"His case was unusual: Roman law was unclear whether to punish him for being a Christian or his servant for denouncing him." },
+  "04-19": { name:"Alphege of Canterbury", title:"Bishop and Martyr", type:"reflection", text:"Archbishop of Canterbury kidnapped by Danish Viking raiders who killed him when the ransom could not be paid — he had refused to let it be raised from the impoverished people of his diocese.", wiki:"Alphege_of_Canterbury", born:"954", bio:"His refusal to burden his flock to save himself struck both the Vikings and later chroniclers as a remarkable act of pastoral self-sacrifice." },
+  "04-20": { name:"Agnes of Montepulciano", title:"Virgin", type:"reflection", text:"An Italian Dominican nun who became abbess at fifteen and reportedly experienced ecstatic visions, levitation during prayer, and the multiplication of food for her community.", wiki:"Agnes_of_Montepulciano", born:"1268", bio:"Catherine of Siena visited her shrine before her own religious conversion, an encounter later depicted by Luca Signorelli and other painters." },
+  "04-22": { name:"Theodore of Sikeon", title:"Bishop", type:"reflection", text:"A 6th-century Byzantine monk born of a dancing girl in a roadside inn who became one of the most revered wonder-workers of the early Byzantine Church.", wiki:"Theodore_of_Sykeon", born:"c. 540", bio:"His biography, one of the most detailed surviving accounts of a Byzantine holy man, describes him spending months at a time suspended in an iron cage, praying." },
+  "04-24": { name:"Fidelis of Sigmaringen", title:"Priest and Martyr", type:"reflection", text:"A German Capuchin lawyer-turned-friar who, while preaching in the Swiss valleys, was hacked to death by a mob that demanded he renounce Catholicism.", wiki:"Fidelis_of_Sigmaringen", born:"1578", bio:"He reportedly told the crowd: 'I came to extinguish heresy, not to embrace it.' He is the first martyr canonised by the Congregation for the Propagation of the Faith." },
+  "04-26": { name:"Our Lady of Good Counsel", title:"Optional Memorial", type:"reflection", text:"An ancient Marian devotion centred on an image in Genazzano, Italy, traditionally associated with the miraculous arrival of a fresco said to have floated from Albania during the Ottoman invasion.", wiki:null, bio:"Pope Paul II was among the first pilgrims; later popes including Leo XIII were deeply devoted to the image." },
+  "04-27": { name:"Zita of Lucca", title:"Virgin", type:"reflection", text:"An Italian domestic servant who worked for the same Lucca family for 48 years, rising before dawn to pray before her duties and secretly giving her food and clothing to the poor.", wiki:"Zita", born:"1212", bio:"Patron of domestic servants and those in domestic service, she is celebrated particularly in Italy with traditions of distributing bread to the poor." },
+  "05-04": { name:"Florian of Austria", title:"Martyr", type:"reflection", text:"A Roman officer martyred in Austria in 304 who became the patron of Poland, Austria, and Upper Austria, and is the patron saint of those facing floods and fire — particularly firefighters.", wiki:"Saint_Florian", born:"c. 250", bio:"Legend holds he was thrown into the Enns river with a stone around his neck; images often show him pouring water on a burning building." },
+  "05-05": { name:"Hilary of Arles", title:"Bishop", type:"reflection", text:"A 5th-century Archbishop of Arles known for personal austerity and extensive charity, though his conflict with Pope Leo I over jurisdiction led to his powers being restricted.", wiki:"Hilary_of_Arles", born:"c. 401", bio:"His dispute with Rome over the rights of metropolitan bishops was settled by an imperial rescript that strengthened papal authority over provincial churches." },
+  "05-06": { name:"Marian and James", title:"Martyrs", type:"reflection", text:"Two North African Christians — Marian a reader, James a deacon — martyred together during the Valerian persecution of 259, whose vivid passion account survives in considerable detail.", wiki:null, bio:"Their account describes the group visions they experienced in prison and was widely read in early North African Christian communities." },
+  "05-07": { name:"John of Beverley", title:"Bishop", type:"reflection", text:"An Anglo-Saxon Bishop of York who was known for educating the poor and performing healings, and who ordained Bede — who wrote warmly of him as a wise and gentle teacher.", wiki:"John_of_Beverley", born:"c. 640", bio:"Henry V attributed his victory at Agincourt in 1415 partly to John's intercession, and the victory was celebrated on this feast day." },
+  "05-08": { name:"Our Lady of Luján", title:"Feast", type:"reflection", text:"Argentina's most beloved Marian shrine, centred on a small terracotta statue of the Immaculate Conception that, according to tradition, a cart carrying the statue in 1630 refused to move until it was left in the village of Luján.", wiki:"Our_Lady_of_Luján", bio:"The Basilica of Luján, built over the site, is now the most visited Catholic pilgrimage site in South America." },
+  "05-09": { name:"Pachomius", title:"Abbot", type:"reflection", text:"An Egyptian soldier converted to Christianity who founded the first organised communal monasteries — the model of religious life in community that would spread across the Christian world.", wiki:"Pachomius_the_Great", born:"c. 292", bio:"Where Anthony the Great pioneered solitary desert life, Pachomius pioneered living it together under a common rule — the template for all later monasticism." },
+  "05-11": { name:"Ignatius of Laconi", title:"Friar", type:"reflection", text:"A Sardinian Capuchin lay brother who spent forty years as a beggar-friar collecting alms through the streets of Cagliari, becoming beloved for his gentleness with the poor and the sick.", wiki:"Ignatius_of_Laconi", born:"1701", bio:"He reportedly developed the ability to see through human pretension, and the wealthy of Cagliari learned quickly that he could not be deceived with false shows of poverty." },
+  "05-15": { name:"Isidore the Farmer", title:"Layman", type:"reflection", text:"A Spanish farm labourer who worked the fields outside Madrid all his life, rising before dawn for Mass each morning, and was said to receive miraculous help with his ploughing from angels on days when prayer made him late.", wiki:"Isidore_the_Farmer", born:"c. 1070", bio:"Patron of farmers and of Madrid, he and his wife María de la Cabeza — also venerated — are one of the few married couples both raised to sainthood." },
+  "05-16": { name:"Brendan the Navigator", title:"Abbot", type:"reflection", text:"An Irish monk who, according to the Voyage of Brendan written centuries after his death, set sail into the Atlantic with seventeen monks and made a seven-year journey to a mysterious 'Isle of the Blessed.'", wiki:"Brendan_the_Navigator", born:"c. 484", bio:"Whether the voyage is historical legend or spiritual allegory, a 1976 reconstruction proved the journey from Ireland to North America in a traditional currach was physically possible." },
+  "05-17": { name:"Paschal Baylon", title:"Friar", type:"reflection", text:"A Spanish Franciscan lay brother and former shepherd who spent his days in the chapel doorway, greeting visitors, and his nights in prayer before the Blessed Sacrament.", wiki:"Paschal_Baylon", born:"1540", bio:"Named patron of Eucharistic congresses and confraternities, his profound devotion to the Eucharist made him a model for later movements of Adoration." },
+  "05-19": { name:"Dunstan of Canterbury", title:"Bishop", type:"reflection", text:"An Anglo-Saxon Archbishop of Canterbury who reformed English monasteries, advised kings, and was an accomplished metalworker — legend says he once caught the devil by the nose with a pair of hot tongs.", wiki:"Dunstan_of_Canterbury", born:"c. 909", bio:"He practically rebuilt English monasticism after the devastation of the Viking raids and was the dominant figure in English church life for half a century." },
+  "05-23": { name:"John Baptist de Rossi", title:"Priest", type:"reflection", text:"An 18th-century Roman priest who spent his evenings preaching to the homeless men sleeping under Rome's bridges and in its markets, and worked to establish shelters for the city's dispossessed.", wiki:"John_Baptist_de_Rossi", born:"1698", bio:"Despite suffering epileptic episodes that made his early career difficult, he was eventually appointed a canon of Santa Maria in Cosmedin and continued his street ministry for decades." },
+  "05-24": { name:"Our Lady Help of Christians", title:"Memorial", type:"reflection", text:"A Marian title prominent in Catholic tradition, celebrated on this day and closely associated with Don Bosco's Salesians and with the patronage of Australia, Papua New Guinea, and China.", wiki:null, bio:"Pope Pius VII instituted the feast in 1815 to give thanks for his release from Napoleonic imprisonment, and later Popes promoted it widely." },
+  "05-28": { name:"Bernard of Montjoux", title:"Priest", type:"reflection", text:"A 10th-century Italian priest who spent over forty years evangelising remote Alpine valleys and who built hospices at the two great Alpine passes still known as the Great and Little St Bernard Pass.", wiki:"Bernard_of_Montjoux", born:"c. 923", bio:"The large dogs bred at those hospices to rescue travellers lost in snow — the Saint Bernard — are the living memorial of his mountain charity." },
+  "05-30": { name:"Joan of Arc", title:"Virgin and Martyr", type:"reflection", text:"A French peasant girl who, claiming divine visions, led French armies to break the Siege of Orléans and helped crown the Dauphin as Charles VII — before being tried for heresy and burned at the stake at nineteen.", wiki:"Joan_of_Arc", born:"c. 1412", bio:"Patron of France and of soldiers, she was condemned by an English-sympathising tribunal, rehabilitated twenty-five years after her death, and canonised in 1920." },
+  "06-04": { name:"Francis Caracciolo", title:"Priest", type:"reflection", text:"A Neapolitan nobleman who co-founded the Clerks Regular Minor, devoted to perpetual adoration of the Blessed Sacrament and missionary work — reportedly spending whole nights in prayer before the tabernacle.", wiki:"Francis_Caracciolo", born:"1563", bio:"His congregation required members to refuse any ecclesiastical promotion or dignity, so that service rather than advancement remained their only motive." },
+  "06-07": { name:"Willibald of Eichstätt", title:"Bishop", type:"reflection", text:"An Anglo-Saxon pilgrim who spent seven years travelling Palestine, Syria, and Constantinople before being sent by Boniface to evangelise Germany and become the first Bishop of Eichstätt.", wiki:"Willibald_of_Eichstätt", born:"c. 700", bio:"His pilgrimage account, recorded by a nun named Huneberc, is the earliest known travelogue written by an English person." },
+  "06-08": { name:"William of York", title:"Bishop", type:"reflection", text:"A 12th-century Archbishop of York whose appointment was bitterly contested for years, partly by supporters of Bernard of Clairvaux, before he was finally reinstated and died peacefully — though some suspected poisoning.", wiki:"William_FitzHerbert", born:"c. 1100", bio:"His death triggered a surge of reported miracles, and his canonisation was a rare instance of a saint whose holiness was controversial even during his lifetime." },
+  "06-10": { name:"Ithamar of Rochester", title:"Bishop", type:"reflection", text:"The first Anglo-Saxon bishop in England, consecrated by Archbishop Honorius around 644, marking the transition of Church leadership from Roman missionaries to native English clergy.", wiki:null, bio:"Bede names him as a man of great learning and sanctity; his appointment represented a milestone in the Christianisation of the English people." },
+  "06-12": { name:"John of Sahagun", title:"Priest", type:"reflection", text:"A Spanish Augustinian friar so bold in his public condemnation of civic injustice that a noblewoman whose lover he had rebuked allegedly had him poisoned.", wiki:"John_of_Sahagún", born:"c. 1430", bio:"He is credited with pacifying violent feuds between rival noble families in Salamanca through the sheer force of his preaching." },
+  "06-14": { name:"Elisha", title:"Prophet", type:"reflection", text:"The prophet who succeeded Elijah in the Hebrew Bible — performing miracles including the purification of a poisoned spring and the raising of a dead child — commemorated in both Eastern and Western Christian calendars.", wiki:"Elisha", born:"9th century BC", bio:"He served as prophet to Israel for about fifty years, a period described in Kings as one of Syria's greatest military pressure on the northern kingdom." },
+  "06-15": { name:"Vitus", title:"Martyr", type:"reflection", text:"A Sicilian child-martyr whose legend describes him surviving multiple tortures — including a cauldron of boiling oil — before dying with his tutor and nurse, probably during the Diocletianic persecution.", wiki:"Vitus", bio:"One of the Fourteen Holy Helpers of medieval popular devotion; Prague's great Gothic cathedral, which houses the Bohemian crown jewels, is named in his honour." },
+  "06-16": { name:"John Francis Regis", title:"Priest", type:"reflection", text:"A French Jesuit who worked among the poorest communities of the Auvergne and Vivarais, travelling in all weather to reach remote mountain villages that saw a priest only once or twice a year.", wiki:"John_Francis_Regis", born:"1597", bio:"He famously walked for hours through mountain snow to reach remote parishes, reportedly confessing as many as 600 penitents in a day." },
+  "06-17": { name:"Emily de Vialar", title:"Religious", type:"reflection", text:"A French woman who used her inheritance to found the Sisters of St Joseph of the Apparition, whose missionaries quickly spread to Algeria, Tunisia, Malta, and beyond.", wiki:"Emily_de_Vialar", born:"1797", bio:"Her order's focus on education and healthcare in North Africa and the Middle East made her a pioneering figure in 19th-century missionary medicine." },
+  "06-18": { name:"Gregory Barbarigo", title:"Bishop", type:"reflection", text:"A Venetian cardinal and bishop of Padua who used his vast personal wealth to build a printing press capable of producing texts in many Eastern languages, hoping to foster reunion with Eastern churches.", wiki:"Gregory_Barbarigo", born:"1625", bio:"A participant in the conclave that elected three different popes, he was himself considered papabile — a likely candidate for election — on more than one occasion." },
+  "06-20": { name:"Silverius", title:"Pope and Martyr", type:"reflection", text:"A 6th-century pope forcibly deposed and exiled by the Byzantine Empress Theodora for refusing to reinstate a deposed patriarch of Constantinople, dying in exile on a barren island.", wiki:"Pope_Silverius", bio:"His case represents one of the starkest examples of imperial interference in papal succession during the turbulent period of Justinian's reconquest of Italy." },
+  "06-23": { name:"Etheldreda of Ely", title:"Abbess", type:"reflection", text:"An Anglo-Saxon princess twice married and twice refusing to consummate her marriages, she eventually founded a great double monastery on the island of Ely, where England's magnificent Ely Cathedral now stands.", wiki:"Æthelthryth", born:"c. 636", bio:"Her body was found undecayed eleven years after burial, and her abbey became one of the most important pilgrimage sites in medieval England." },
+  "06-25": { name:"William of Vercelli", title:"Abbot", type:"reflection", text:"An Italian hermit who founded the Montevergine monastery in the mountains of Campania, which became a major pilgrimage site due to its beloved icon of Our Lady.", wiki:"William_of_Montevergine", born:"1085", bio:"He reportedly rejected advice to model his community on existing rules, preferring a way of life drawn directly from his own prayerful discernment in the wilderness." },
+  "06-26": { name:"Josemaría Escrivá", title:"Priest", type:"quote", text:"Don't try to be older than you are. Your youthfulness is a treasure; don't squander it.", source:"The Way", wiki:"Josemaría_Escrivá", born:"1902", bio:"A Spanish priest who founded Opus Dei in 1928, teaching that ordinary professional work and family life can be means of holiness — a concept that transformed Catholic lay spirituality." },
+  "07-01": { name:"Junipero Serra", title:"Priest", type:"reflection", text:"A Franciscan missionary from Mallorca who founded a chain of nine missions along coastal California, baptising thousands of indigenous people — though his treatment of Native Americans remains a subject of historical debate.", wiki:"Junípero_Serra", born:"1713", bio:"Canonised by Pope Francis in 2015, Serra is patron of California, though some Native communities have called for his monuments to be reconsidered." },
+  "07-02": { name:"Bernardino Realino", title:"Priest", type:"reflection", text:"An Italian Jesuit who, after a distinguished legal career, became a priest and spent over forty years in Lecce, so beloved by the city that its citizens resisted even his own request to be transferred.", wiki:"Bernardino_Realino", born:"1530", bio:"When he lay dying, a Lecce nobleman collected several drops of his blood in a vial; like San Gennaro's blood in Naples, this relic is reported to liquefy on certain anniversaries." },
+  "07-07": { name:"Palladius of Ireland", title:"Bishop", type:"reflection", text:"Sent by Pope Celestine I in 431 as the first bishop to Ireland — predating Patrick's famous mission — to minister to the Irish 'already believing in Christ.'", wiki:"Palladius_(bishop)", bio:"His mission shows that Irish Christianity pre-existed Patrick, though Patrick's personality and later writings eclipsed Palladius in popular memory." },
+  "07-08": { name:"Aquila and Priscilla", title:"Disciples", type:"reflection", text:"A Jewish-Christian couple, tentmakers like Paul, who became two of his closest companions, hosting house churches in Corinth, Ephesus, and Rome.", wiki:"Priscilla_and_Aquila", born:"1st century", bio:"Paul calls them 'my co-workers in Christ Jesus' who 'risked their necks' for him; they appear in Acts, Romans, and two of his letters." },
+  "07-10": { name:"Seven Brothers, Martyrs with Felicitas", title:"Martyrs", type:"reflection", text:"Seven sons of a Roman widow named Felicitas, each martyred separately under Emperor Antoninus Pius in the 2nd century after their mother refused to sacrifice to pagan gods.", wiki:"Felicitas_and_her_seven_sons", bio:"Their story — a mother witnessing each child's death — was so moving that Felicitas became one of the most popular saints of the Roman martyrology." },
+  "07-12": { name:"John Gualbert", title:"Abbot", type:"reflection", text:"A Florentine nobleman who, on his way to murder the man who killed his brother, met the murderer in a narrow passage and could not strike him down when he spread his arms in a cross — and instead embraced him.", wiki:"John_Gualbert", born:"c. 995", bio:"He went straight to a church to pray, founded the Vallombrosan monastic order, and spent the rest of his life in reform of the Church." },
+  "07-17": { name:"Martyrs of Compiègne", title:"Martyrs", type:"reflection", text:"Sixteen Carmelite nuns of Compiègne, France, guillotined during the Reign of Terror in 1794 for their religious vows — reportedly singing the Salve Regina as they mounted the scaffold one by one.", wiki:"Martyrs_of_Compiègne", bio:"Their story is the subject of Francis Poulenc's opera Dialogues of the Carmelites. Their prioress was the last to die." },
+  "07-18": { name:"Symphorosa and Her Sons", title:"Martyrs", type:"reflection", text:"A Roman widow and her seven sons said to have been martyred under Emperor Hadrian for refusing to sacrifice to the gods on behalf of the emperor's new villa at Tivoli.", wiki:null, bio:"Their collective story echoed the biblical narrative of the Maccabean martyrs and was widely cited in early Christian preaching on the courage of family faith." },
+  "07-19": { name:"Macrina the Younger", title:"Virgin", type:"reflection", text:"Eldest sister of Basil the Great and Gregory of Nyssa, a woman of remarkable intelligence who converted her household into a monastic community and was regarded by her brothers as their spiritual teacher.", wiki:"Macrina_the_Younger", born:"c. 330", bio:"Gregory wrote her biography as a philosophical dialogue, placing some of the era's finest theological reflections on death and the soul in her mouth." },
+  "07-27": { name:"Pantaleon", title:"Martyr", type:"reflection", text:"A physician to the Emperor Maximian who converted to Christianity and was martyred for it — the olive tree he was chained to during execution reportedly burst into bloom when he died.", wiki:"Pantaleon", bio:"One of the Fourteen Holy Helpers of medieval medicine; his cult is particularly strong in Venice, whose dialect form of his name — Pantalone — gave us the word 'pantaloons.'" },
+  "07-28": { name:"Innocent I", title:"Pope", type:"reflection", text:"A 5th-century pope who claimed, amid the chaos of Rome's sack by the Visigoths in 410, a sweeping authority over the universal Church — asserting that no major church decision could be made without Rome's approval.", wiki:"Pope_Innocent_I", bio:"He was absent from Rome negotiating with Emperor Honorius when Alaric's Visigoths entered the city — the first sack of Rome in 800 years." },
+  "08-03": { name:"Lydia of Thyatira", title:"Disciple", type:"reflection", text:"A businesswoman in Philippi who, according to Acts 16, was the first recorded Christian convert in Europe and who invited Paul and his companions to stay in her home.", wiki:"Lydia_of_Thyatira", born:"1st century", bio:"Described as 'a dealer in purple cloth' — a luxury trade — she is venerated as a patron of dyers and of Christian business people in the Eastern Orthodox tradition." },
+  "08-15": { name:"The Assumption of the Blessed Virgin Mary", title:"Solemnity", type:"quote", text:"My soul magnifies the Lord, and my spirit rejoices in God my Savior.", source:"Mary's Magnificat, Luke 1:46-47", wiki:null, bio:"Defined as dogma by Pope Pius XII in 1950, the Assumption holds that Mary was taken body and soul into heavenly glory at the end of her earthly life — the Church's oldest Marian feast, celebrated since the 5th century." },
+  "08-17": { name:"Hyacinth of Poland", title:"Priest", type:"reflection", text:"A Dominican missionary who evangelised Poland, the Baltic, Russia, and possibly Scandinavia, becoming one of the most important figures in the Christianisation of northern Europe.", wiki:"Hyacinth_of_Poland", born:"c. 1185", bio:"Legend holds he rescued the Blessed Sacrament and a heavy stone statue of Mary by carrying both during a Mongol raid — prompting his title 'Apostle of the North.'" },
+  "08-18": { name:"Helena", title:"Empress", type:"reflection", text:"Mother of Emperor Constantine, she made a pilgrimage to the Holy Land in her old age and, according to tradition, identified the sites of Christ's Passion and discovered the True Cross.", wiki:"Helena_(empress)", born:"c. 248", bio:"She built the Church of the Nativity in Bethlehem and the Church of the Holy Sepulchre in Jerusalem, still among the most visited pilgrimage sites in the world." },
+  "08-26": { name:"Teresa of Jesus Jornet Ibars", title:"Religious", type:"reflection", text:"A Spanish nun who founded the Little Sisters of the Abandoned Elderly, one of the first religious congregations dedicated entirely to the care of poor elderly people.", wiki:"Teresa_Jornet_Ibars", born:"1843", bio:"By the time of her death, her congregation had opened nearly a hundred homes for the elderly across Spain and Latin America." },
+  "08-30": { name:"Margaret Ward", title:"Martyr", type:"reflection", text:"An English laywoman hanged in 1588 for helping a Catholic priest escape prison, refusing the offer of a pardon if she would attend a Protestant church service.", wiki:"Margaret_Ward", born:"c. 1556", bio:"She is among the Forty Martyrs of England and Wales, a group canonised by Pope Paul VI in 1970 as representative of the many who died in the Elizabethan persecution." },
+  "08-31": { name:"Aidan of Lindisfarne", title:"Bishop", type:"reflection", text:"An Irish monk from Iona sent to evangelise Northumbria who established the monastery of Lindisfarne as the centre of Anglo-Saxon Christianity, personally walking the countryside to preach rather than riding on horseback.", wiki:"Aidan_of_Lindisfarne", bio:"Bede, who rarely praised without qualification, described him as almost beyond praise — a man whose life exactly matched what he preached." },
+  "09-01": { name:"Giles", title:"Hermit", type:"reflection", text:"A 7th-century hermit whose legend places him in southern France, where he reportedly lived in a cave and was fed by a hind until hunters pursuing the deer discovered his hermitage.", wiki:"Giles", born:"c. 650", bio:"One of the most popular saints of the Middle Ages, with over 160 English churches dedicated to him; patron of cripples, beggars, and blacksmiths." },
+  "09-02": { name:"Ingrid Elofsdotter of Sweden", title:"Religious", type:"reflection", text:"A 13th-century Swedish noblewoman who, after pilgrimage to Rome, founded the first Dominican convent in Scandinavia at Skänninge.", wiki:null, born:"c. 1220", bio:"She is venerated as a patron saint of Sweden in the Dominican tradition and beatified by Pope John Paul II in 1998." },
+  "09-04": { name:"Rose of Viterbo", title:"Virgin", type:"reflection", text:"An Italian girl who began preaching publicly on street corners for the Pope's cause against the Emperor at age ten, was exiled with her family by the pro-imperial city government, and died at seventeen.", wiki:"Rose_of_Viterbo", born:"1233", bio:"She is venerated as a patron of her home city of Viterbo and of exiles and those separated from their homeland." },
+  "09-06": { name:"Bega of Northumbria", title:"Virgin", type:"reflection", text:"An Irish princess who, according to legend, fled an unwanted marriage by sea and landed in Cumbria, where she founded a community of women devoted to prayer and service of the poor.", wiki:null, born:"7th century", bio:"St Bees Head in Cumbria takes its name from her; St Bees Priory was founded in the 12th century near the site of her reputed landing." },
+  "09-07": { name:"Regina of Alise", title:"Martyr", type:"reflection", text:"A 3rd-century Burgundian girl who, according to her legend, was beheaded for refusing the marriage and pagan demands of the Roman prefect Olibrius — the same figure who confronted Margaret of Antioch.", wiki:"Regina_of_Alise", bio:"She is patron of Alise-Sainte-Reine in Burgundy, where her legend places her martyrdom, and her cult became one of the most popular in medieval France." },
+  "09-10": { name:"Thomas of Villanova", title:"Bishop", type:"reflection", text:"An Augustinian friar who became Archbishop of Valencia and was known as the 'Father of the Poor' for his practice of giving away almost every coin that came to him.", wiki:"Thomas_of_Villanova", born:"1486", bio:"He reportedly arrived in Valencia for his episcopal consecration on a borrowed mule, having given away his travel money before he even left the monastery." },
+  "09-11": { name:"Adelphus of Metz", title:"Bishop", type:"reflection", text:"A 5th-century Bishop of Metz whose long and peaceful episcopate helped consolidate Christianity in the region of Lorraine and who founded monasteries throughout his diocese.", wiki:null, bio:"His cathedral in Metz became one of the great churches of the Frankish kingdom, later rebuilt into the Gothic masterpiece that still stands today." },
+  "09-18": { name:"Joseph of Cupertino", title:"Priest", type:"reflection", text:"An Italian Franciscan friar so prone to ecstatic levitation during Mass and prayer that his superiors had to restrict his public ministry, as his flights caused disruption — and drew enormous crowds.", wiki:"Joseph_of_Cupertino", born:"1603", bio:"Patron of aviators, astronauts, and students sitting examinations, his levitations were reportedly witnessed by hundreds of people including sceptical philosophers." },
+  "09-22": { name:"Maurice and Companions", title:"Martyrs", type:"reflection", text:"A Roman officer commanding a legion of Egyptian Christian soldiers who, according to tradition, refused an order to persecute fellow Christians in Switzerland and were collectively executed around 286.", wiki:"Maurice_(martyr)", bio:"Patron of soldiers, swordsmiths, and the Swiss Guard, his city of Saint-Maurice in Switzerland became an important early pilgrimage site." },
+  "09-24": { name:"Our Lady of Walsingham", title:"Optional Memorial", type:"reflection", text:"A Marian shrine in Norfolk, England, established after a noblewoman reportedly received a vision of the Holy House of Nazareth in 1061, making Walsingham one of the most important pilgrimage sites of medieval England.", wiki:"Our_Lady_of_Walsingham", bio:"Destroyed under Henry VIII, the shrine was partially restored in the 20th century; it now draws pilgrims from Anglican, Catholic, and Orthodox traditions." },
+  "09-25": { name:"Finbar of Cork", title:"Bishop", type:"reflection", text:"An Irish monk who founded the monastery that grew into the city of Cork and became its first bishop, patron saint of both Cork and the Diocese of Ross.", wiki:"Finnbarr_of_Cork", born:"c. 550", bio:"His hermitage at Gougane Barra, a remote lake surrounded by mountains in County Cork, remains a place of pilgrimage and one of Ireland's most beautiful landscapes." },
+  "10-03": { name:"Thomas of Hereford", title:"Bishop", type:"reflection", text:"An English bishop whose insistence on the Church's independence from royal interference led to years of conflict with Edward I, and who died in Italy seeking papal support.", wiki:"Thomas_de_Cantilupe", born:"c. 1218", bio:"The last Englishman to be canonised before the Reformation, his tomb in Hereford Cathedral became one of medieval England's most important pilgrimage destinations." },
+  "10-08": { name:"Pelagia of Antioch", title:"Penitent", type:"reflection", text:"A celebrated actress and dancer in 4th-century Antioch who, overhearing a bishop's sermon, was converted on the spot, gave away her jewels and wealth, and spent the rest of her life as a hermit in Jerusalem.", wiki:"Pelagia_of_Antioch", bio:"Her dramatic conversion was recorded by a deacon named James who was present and became one of the most widely read conversion stories of late antiquity." },
+  "10-10": { name:"Francis Borgia", title:"Priest", type:"reflection", text:"A Spanish duke and viceroy of Catalonia who, after seeing the decomposed face of his patron Empress Isabella when her coffin was opened, resolved to 'serve no master who could die' and became a Jesuit priest.", wiki:"Francis_Borgia", born:"1510", bio:"He later became Superior General of the Jesuits and helped establish the Roman College, now the Gregorian University." },
+  "10-12": { name:"Wilfrid of York", title:"Bishop", type:"reflection", text:"An Anglo-Saxon bishop who championed the Roman method of calculating Easter at the Synod of Whitby in 664, persuading the Northumbrian church to align with Rome rather than the Irish tradition.", wiki:"Wilfrid", born:"c. 633", bio:"His contentious career saw him appeal directly to Rome against his own archbishop — an early and dramatic use of papal authority in an English church dispute." },
+  "10-13": { name:"Edward the Confessor", title:"King", type:"reflection", text:"England's last Anglo-Saxon king before the Conquest, remembered for rebuilding Westminster Abbey and for a reign characterised by personal piety and relative peace.", wiki:"Edward_the_Confessor", born:"c. 1003", bio:"He died just days after the consecration of Westminster Abbey, which he never lived to see completed; it remains the coronation church of English and British monarchs." },
+  "10-20": { name:"Maria Bertilla Boscardin", title:"Virgin", type:"reflection", text:"An Italian nun known as 'the goose' by her novice-mistress for her apparent slowness, who became a devoted nurse of diphtheria patients and soldiers wounded in World War I.", wiki:"Maria_Bertilla_Boscardin", born:"1888", bio:"She died of cancer at thirty-three, and her combination of simple obedience and loving care was cited at her canonisation as a model of hidden holiness." },
+  "10-21": { name:"Ursula and Companions", title:"Martyrs", type:"reflection", text:"A legendary British princess who, according to medieval tradition, led a group of virgin companions on pilgrimage and was massacred by Huns near Cologne for refusing to marry their chieftain.", wiki:"Ursula", bio:"The wildly varying accounts of her companions — from 11 to 11,000 — reflect the growth of her legend rather than historical record; but her cult was enormous in medieval Europe." },
+  "10-25": { name:"Crispin and Crispinian", title:"Martyrs", type:"reflection", text:"Two brothers said to have been Roman missionaries to northern France who worked by night as shoemakers to fund their preaching, and were martyred around 285.", wiki:"Crispin_and_Crispinian", bio:"Patron saints of cobblers and leatherworkers; Shakespeare's Henry V gives the 'St Crispin's Day speech' before the Battle of Agincourt, fought on their feast day in 1415." },
+  "10-26": { name:"Evaristus", title:"Pope and Martyr", type:"reflection", text:"Traditionally the fifth pope, serving around 100 AD, who is said to have organised the Roman Church into formal parishes — among the earliest recorded instances of parish structure.", wiki:"Pope_Evaristus", bio:"Very little is historically verifiable about his life; he is included in the oldest Roman martyrologies as a martyr, though the evidence is uncertain." },
+  "10-27": { name:"Frumentius of Ethiopia", title:"Bishop", type:"reflection", text:"A young Roman castaway who became a court official in the Kingdom of Aksum, gradually introduced Christianity there, and was consecrated by Athanasius as the first Bishop of Aksum.", wiki:"Frumentius", born:"c. 300", bio:"Called 'Abba Salama' — Father of Peace — by the Ethiopian Church, he is venerated as the Apostle of Ethiopia, one of the oldest Christian nations in the world." },
+  "10-29": { name:"Narcissus of Jerusalem", title:"Bishop", type:"reflection", text:"A 2nd-century Bishop of Jerusalem who reportedly performed a miracle — changing water into oil for Easter lamps when the supply ran out — and lived as a hermit for years after being falsely accused.", wiki:"Narcissus_of_Jerusalem", born:"c. 99", bio:"He reportedly lived to over a hundred years of age, returning from his self-imposed hermit exile to lead Jerusalem's church again near the end of his life." },
+  "10-30": { name:"Dorothy of Montau", title:"Mystic", type:"reflection", text:"A Prussian laywoman and mother of nine who, after her husband's death, became an anchoress walled into a cell beside Marienwerder Cathedral, where she lived on mystical visions and the Eucharist until her death.", wiki:"Dorothy_of_Montau", born:"1347", bio:"She is patron saint of Prussia and Lithuania, and her mystical writings are among the most vivid vernacular spiritual accounts of the late medieval period." },
+  "10-31": { name:"All Hallows Eve", title:"Vigil of All Saints", type:"reflection", text:"The eve of the great feast of All Saints, when the Church begins its remembrance of the communion of saints and all the faithful departed.", wiki:null, bio:"The word Halloween is a contraction of 'All Hallows Eve'; the ancient custom of praying for the dead and honouring saints on this night predates many of the secular traditions now associated with it." },
+  "11-01": { name:"All Saints", title:"Solemnity", type:"quote", text:"Blessed are the pure in heart, for they shall see God.", source:"Matthew 5:8, from the Beatitudes read at this feast", wiki:null, bio:"A feast honouring every saint in heaven, known and unknown, established in Rome in the 7th century and extended to the universal Church by Pope Gregory IV in 835." },
+  "11-02": { name:"All Souls", title:"Commemoration of the Faithful Departed", type:"reflection", text:"On this day the Church prays for all the faithful who have died, united with them in the belief that prayer can help those still being purified before the fullness of heaven.", wiki:null, bio:"The practice of praying for the dead is ancient in both Judaism and Christianity; this specific feast was established by St Odilo of Cluny in 998 and spread across Europe within two centuries." },
+  "11-05": { name:"Elizabeth and Zechariah", title:"Parents of John the Baptist", type:"reflection", text:"In Luke's Gospel, Zechariah the priest and his wife Elizabeth receive the angel Gabriel's announcement that they will have a son in old age — John, who will prepare the way for the Messiah.", wiki:null, bio:"Elizabeth is described as a relative of Mary, and their meeting forms the setting of the Visitation, at which Mary speaks the Magnificat." },
+  "11-06": { name:"Leonard of Noblac", title:"Hermit", type:"reflection", text:"A 6th-century Frankish nobleman who became a hermit near Limoges and, according to his legend, won from King Clovis the gift of freeing any prisoner he visited in the royal jails.", wiki:"Leonard_of_Noblac", born:"c. 500", bio:"Patron of captives, prisoners, and women in childbirth, his cult became immensely popular after returning Crusaders promoted him as the saint who had freed Christian prisoners in the Holy Land." },
+  "11-07": { name:"Willibrord of Utrecht", title:"Bishop", type:"reflection", text:"An English monk trained in Ireland who became the 'Apostle of the Frisians,' establishing the first archdiocese in what is now the Netherlands.", wiki:"Willibrord", born:"658", bio:"He founded the Abbey of Echternach in Luxembourg, still the site of a unique 'dancing procession' held on his feast day each year." },
+  "11-08": { name:"The Four Crowned Martyrs", title:"Martyrs", type:"reflection", text:"Four soldiers — or possibly four stonemasons — martyred under Diocletian for refusing either to make an idol or sacrifice to pagan gods; two overlapping groups whose stories merged in their combined feast.", wiki:"Four_Crowned_Martyrs", bio:"Their patronage of stonemasons was deeply embedded in medieval guild life, and Freemasonry later adopted them as its symbolic patron saints." },
+  "11-13": { name:"Frances Xavier Cabrini", title:"Religious", type:"reflection", text:"An Italian nun who founded the Missionary Sisters of the Sacred Heart and emigrated to the United States, where she spent decades building orphanages, schools, and hospitals for the waves of Italian immigrants.", wiki:"Frances_Xavier_Cabrini", born:"1850", bio:"The first American citizen to be canonised, her organisation eventually ran over 70 institutions across the Americas, Europe, and beyond." },
+  "11-14": { name:"Laurence O'Toole", title:"Bishop", type:"reflection", text:"Archbishop of Dublin during the Norman invasion of Ireland who worked tirelessly to protect his city's population, negotiating between Irish kings and the Normans, and died in Normandy while pursuing his final diplomatic mission.", wiki:"Laurence_O'Toole", born:"c. 1128", bio:"Patron saint of Dublin, he was canonised in 1225; his heart is preserved as a relic in Dublin's Christ Church Cathedral." },
+  "11-19": { name:"Mechthild of Hackeborn", title:"Virgin", type:"reflection", text:"A German Benedictine nun and mystic whose visions of Christ's Sacred Heart, recorded in The Book of Special Grace, influenced the Sacred Heart devotion later formalised through Margaret Mary Alacoque.", wiki:"Mechtild_of_Hackeborn", born:"1241", bio:"A gifted musician and teacher, she was called 'God's nightingale' by her community at the Helfta monastery, one of the great centres of female mysticism in medieval Germany." },
+  "11-20": { name:"Edmund the Martyr", title:"King and Martyr", type:"reflection", text:"King of East Anglia who was captured by Viking Great Army invaders in 869, offered terms that would make him a vassal, and refused — so was bound to a tree and shot through with arrows.", wiki:"Edmund_the_Martyr", born:"c. 841", bio:"His shrine at Bury St Edmunds became one of the richest and most visited in medieval England; the town and Suffolk's great abbey are named for him." },
+  "11-26": { name:"Sylvester Gozzolini", title:"Abbot", type:"reflection", text:"A 13th-century Italian canon lawyer who abandoned a cathedral post to become a hermit after a vision of a decomposing corpse prompted him to reconsider his comfortable life.", wiki:"Sylvester_Gozzolini", born:"1177", bio:"He founded the Silvestrine Benedictines, who follow the original Rule of Benedict with few later modifications." },
+  "11-27": { name:"Virgil of Salzburg", title:"Bishop", type:"reflection", text:"An Irish monk who became Bishop of Salzburg and asserted, against criticism from St Boniface, that the Earth was spherical and that human beings lived on its other side — a remarkably early and correct insistence.", wiki:"Vergilius_of_Salzburg", born:"c. 700", bio:"He evangelised Carinthia and founded Salzburg Cathedral; his intellectual defence of the spherical earth makes him a patron saint of scientists in some traditions." },
+  "11-28": { name:"Catherine Labouré", title:"Virgin", type:"reflection", text:"A French Daughter of Charity who reported a series of visions in 1830 in which Mary showed her the design of the Miraculous Medal, now worn by hundreds of millions of Catholics worldwide.", wiki:"Catherine_Labouré", born:"1806", bio:"She kept her visions secret for forty-six years, continuing as a humble laundress in the Daughters of Charity hospice until shortly before her death." },
+  "11-29": { name:"Saturninus of Toulouse", title:"Bishop and Martyr", type:"reflection", text:"Traditionally the first bishop of Toulouse, martyred around 250 when he was tied to a bull by a pagan crowd and dragged to death through the streets.", wiki:"Saturnin_of_Toulouse", bio:"The Basilica of Saint-Sernin in Toulouse, one of the most magnificent Romanesque churches in Europe, was built over the site of his veneration and remains a stop on the Camino de Santiago." },
+  "12-01": { name:"Eligius of Noyon", title:"Bishop", type:"reflection", text:"A master goldsmith and royal treasurer who became bishop and used his enormous personal wealth to buy and free slaves, ultimately becoming patron of goldsmiths and metalworkers.", wiki:"Eligius", born:"c. 590", bio:"His feast was one of the most popular among medieval craftspeople; the 'Prioress's Tale' in Chaucer and Maupassant's 'Boule de Suif' both obliquely reference his cultural prominence." },
+  "12-02": { name:"Bibiana of Rome", title:"Martyr", type:"reflection", text:"A Roman martyr, daughter of two Christian parents also martyred under Julian the Apostate, who was executed around 363 after being scourged to death rather than deny her faith.", wiki:"Viviana", bio:"The 5th-century church built over her reputed burial site near the Esquiline Hill survives in Rome; Gian Lorenzo Bernini carved a famous marble statue of her there." },
+  "12-05": { name:"Sabbas the Sanctified", title:"Abbot", type:"reflection", text:"A Cappadocian monk who founded the Great Lavra monastery in the Judean desert — still inhabited by Orthodox monks today, making it the oldest continuously occupied monastery in the world.", wiki:"Sabbas_the_Sanctified", born:"439", bio:"The Mar Saba monastery perched on a cliff above the Kidron Valley has sheltered monks without interruption since 483 AD and remains a major site of Eastern Christian monasticism." },
+  "12-15": { name:"Nino of Georgia", title:"Missionary", type:"reflection", text:"A female slave who brought Christianity to the Kingdom of Iberia (Georgia) in the 4th century, healing the queen and converting the king through her prayers and example.", wiki:"Nino", born:"c. 296", bio:"Called 'Equal to the Apostles' by the Georgian Church, she is credited with evangelising what is now Georgia — one of the oldest Christian nations. Her distinctive cross, with drooping arms, is the national symbol." },
+  "12-16": { name:"Adelaide of Italy", title:"Empress", type:"reflection", text:"A Burgundian princess who, after her first husband's murder and months of imprisonment by his successor, was freed by Otto I, married him, and became Holy Roman Empress — using her position for extensive charity.", wiki:"Adelaide_of_Italy", born:"931", bio:"She outlived her second husband by decades, serving as regent, endowing monasteries, and protecting the poor until her death at sixty-eight." },
+  "12-17": { name:"Olympias of Constantinople", title:"Deaconess", type:"reflection", text:"A wealthy Byzantine noblewoman ordained as a deaconess who became one of the most important patrons of the early Church in Constantinople, and a close friend and correspondent of John Chrysostom.", wiki:"Olympias_of_Constantinople", born:"c. 361", bio:"When Chrysostom was exiled, she remained in contact with him by letter; seventeen of his letters to her survive, among the most moving personal correspondence in patristic literature." },
+  "12-18": { name:"Flannan of Killaloe", title:"Bishop", type:"reflection", text:"An Irish bishop and pilgrim of the 7th century, son of a king, who made a pilgrimage to Rome and is patron of Killaloe and its diocese in County Clare.", wiki:null, born:"7th century", bio:"The remote Flannan Isles off Scotland, site of the famous unsolved mystery of three lighthouse keepers who disappeared without trace in 1900, bear his name." },
+  "12-19": { name:"Anastasius I", title:"Pope", type:"reflection", text:"A late 4th-century pope of considerable personal holiness whose three-year pontificate included difficult correspondence with Augustine of Hippo over the writings of Origen.", wiki:"Pope_Anastasius_I", bio:"He died in 401, and Jerome remarked on how quickly Rome had lost such a great bishop — a rare moment of praise from the habitually critical scholar." },
+  "12-20": { name:"Dominic of Silos", title:"Abbot", type:"reflection", text:"A Spanish Benedictine abbot who rebuilt and reformed the monastery of Santo Domingo de Silos, which became famous for its magnificent Romanesque cloister and its modern-day Gregorian chant recordings.", wiki:"Dominic_of_Silos", born:"c. 1000", bio:"His monastery became a sanctuary for Mozarabic Christians escaping Muslim rule and a centre for ransoming Christian captives, a work he pursued tirelessly." },
+  "12-22": { name:"Chaeremon and Companions", title:"Martyrs", type:"reflection", text:"An elderly Bishop of Nilópolis in Egypt who fled into the Arabian desert with companions to escape the Decian persecution of 250, and was never seen again.", wiki:null, bio:"His disappearance was reported by Dionysius of Alexandria, who wrote movingly of the many Egyptian Christians who vanished or died in the desert rather than apostatise." },
+  "12-24": { name:"Christmas Eve", title:"Vigil of the Nativity", type:"quote", text:"Do not be afraid; for behold, I proclaim to you good news of great joy that will be for all the people.", source:"Luke 2:10", wiki:null, bio:"The night before Christmas has been marked by special liturgical celebration since at least the 4th century; the tradition of Midnight Mass — now often celebrated at an earlier hour — draws its power from the ancient instinct to welcome the light in darkness." },
+  "12-25": { name:"The Nativity of the Lord", title:"Solemnity", type:"quote", text:"The Word became flesh and made his dwelling among us.", source:"John 1:14", wiki:null, bio:"Christmas, the celebration of Christ's birth, has been observed on December 25 since at least the 4th century; it remains the most widely celebrated religious and cultural feast in the world." },
+  "12-30": { name:"Anysia of Thessalonica", title:"Martyr", type:"reflection", text:"A young noblewoman of Thessalonica martyred around 304 who, when stopped by a Roman soldier demanding to know if she was Christian, gave him her answer — and was killed on the spot.", wiki:"Anysia_of_Thessalonica", bio:"She gave away her inherited wealth to the poor before her martyrdom and is venerated in both Eastern and Western martyrologies." },
+};
+
+const FALLBACK = {
+  title:"Known only to God",
+  text:"This day's saint hasn't been added to the calendar yet. The roll call of holiness is far larger than any list — countless faithful lives are remembered by God alone."
+};
+
+const weekdayFmt = new Intl.DateTimeFormat('en-US', { weekday:'long' });
+const monthDayFmt = new Intl.DateTimeFormat('en-US', { month:'short', day:'numeric' });
+
+let current = new Date();
+current.setHours(0,0,0,0);
+const imageCache = {};
+
+function keyFor(date){
+  const mm = String(date.getMonth()+1).padStart(2,'0');
+  const dd = String(date.getDate()).padStart(2,'0');
+  return `${mm}-${dd}`;
+}
+
+async function fetchPortrait(wikiTitle){
+  if (!wikiTitle) return null;
+  if (imageCache[wikiTitle] !== undefined) return imageCache[wikiTitle];
+  try{
+    const res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikiTitle)}`);
+    if (!res.ok) throw new Error('not ok');
+    const data = await res.json();
+    const url = data.thumbnail && data.thumbnail.source ? data.thumbnail.source : null;
+    imageCache[wikiTitle] = url;
+    return url;
+  }catch(e){
+    imageCache[wikiTitle] = null;
+    return null;
+  }
+}
+
+// Returns the display-ready name with appropriate prefix.
+// Rules:
+//   • Feast days, mysteries, Marian titles, observances → no prefix
+//   • "[Name] and Companions" → "Saint [Name] and Companions"
+//   • Multiple named saints joined by "and" / "&" → "Saints …"
+//   • "Sts …" → "Saints …"
+//   • Everything else (single person) → "Saint …"
+function withSaintPrefix(name){
+  // Feast days, mysteries, observances — no prefix
+  if (/^(The |Our Lady|All Saints$|All Souls$|All Hallows|Beginning of|Christmas Eve)/.test(name)) return name;
+  if (/^(Seven Founders|Seven Brothers|Four Crowned)/.test(name)) return name;
+
+  // Legacy "Sts " prefix → normalise to "Saints "
+  if (/^Sts /.test(name)) return 'Saints ' + name.slice(4);
+
+  // "[Named saint(s)] and Companions" — primary name takes singular "Saint"
+  if (/ and Companions/.test(name)) return 'Saint ' + name;
+
+  // Multiple individually-named saints ("and" / "&")
+  if (/ and | & /.test(name)) return 'Saints ' + name;
+
+  // Single person
+  return 'Saint ' + name;
+}
+
+// Generation counter — each render() call gets a unique ID.
+// Portrait fetches check this before writing to DOM so a slow network response
+// for a previous day cannot overwrite current day content.
+let renderGen = 0;
+
+function renderSync(date){
+  const key = keyFor(date);
+  const entry = SAINTS[key];
+
+  document.getElementById('weekday').textContent = weekdayFmt.format(date);
+  document.getElementById('bigDate').textContent = monthDayFmt.format(date);
+
+  const nameEl     = document.getElementById('saintName');
+  const titleEl    = document.getElementById('saintTitle');
+  const bornEl     = document.getElementById('saintBorn');
+  const quoteBlock = document.getElementById('quoteBlock');
+  const bioBlock   = document.getElementById('bioBlock');
+  const medallion  = document.getElementById('medallion');
+
+  if (entry) {
+    var displayName = withSaintPrefix(entry.name);
+    nameEl.textContent  = displayName;
+    titleEl.textContent = entry.title || '';
+    bornEl.textContent  = entry.born ? 'Born ' + entry.born : '';
+
+    var companionHtml = entry.companions
+      ? '<p class="companion-note">' + entry.companions + '</p>' : '';
+
+    if (entry.type === 'quote') {
+      quoteBlock.innerHTML =
+        '<span class="quote-mark">\u201c</span>' +
+        '<p class="quote-text">' + entry.text + '</p>' +
+        '<p class="attribution">\u2014 ' + displayName + '</p>' +
+        (entry.source ? '<p class="source-note">' + entry.source + '</p>' : '') +
+        companionHtml;
+    } else {
+      quoteBlock.innerHTML =
+        '<p class="reflection-text">' + entry.text + '</p>' +
+        '<p class="attribution">\u2014 remembered today</p>' +
+        companionHtml;
+    }
+
+    bioBlock.innerHTML = entry.bio
+      ? '<p class="bio-text">' + entry.bio + '</p>' : '';
+
+    medallion.innerHTML =
+      '<span class="fallback-initial">' + entry.name.charAt(0) + '</span>';
+
+    var myGen = ++renderGen;
+    if (entry.wiki) {
+      fetchPortrait(entry.wiki).then(function(url){
+        if (renderGen !== myGen) return;
+        if (url) {
+          document.getElementById('medallion').innerHTML =
+            '<img src="' + url + '" alt="Portrait of ' + displayName + '">';
+        }
+      });
+    }
+  } else {
+    nameEl.textContent   = FALLBACK.title;
+    titleEl.textContent  = '';
+    bornEl.textContent   = '';
+    quoteBlock.innerHTML = '<p class="reflection-text">' + FALLBACK.text + '</p>';
+    bioBlock.innerHTML   = '';
+    medallion.innerHTML  = '<span class="fallback-initial">\u271a</span>';
+  }
+}
+
+function render(date, animate){
+  var card = document.getElementById('card');
+  if (animate) {
+    card.classList.add('turning');
+    setTimeout(function(){ card.classList.remove('turning'); }, 640);
+  }
+  renderSync(date);
+}
+
+function syncJumpInput(){
+  var m = current.getMonth();
+  var d = current.getDate();
+  document.getElementById('jumpMonth').value = m;
+  populateDays(m, d);
+}
+
+function shiftDay(n){
+  current.setDate(current.getDate() + n);
+  render(current, true);
+  syncJumpInput();
+}
+
+document.getElementById('prevBtn').addEventListener('click', function(){ shiftDay(-1); });
+document.getElementById('nextBtn').addEventListener('click', function(){ shiftDay(1); });
+document.getElementById('todayBtn').addEventListener('click', function(){
+  current = new Date();
+  current.setHours(0,0,0,0);
+  render(current, true);
+  syncJumpInput();
+});
+document.getElementById('jumpMonth').addEventListener('change', function(){
+  current.setMonth(parseInt(this.value));
+  var maxDay = new Date(current.getFullYear(), current.getMonth()+1, 0).getDate();
+  if (current.getDate() > maxDay) current.setDate(maxDay);
+  populateDays(current.getMonth(), current.getDate());
+  render(current, true);
+});
+document.getElementById('jumpDay').addEventListener('change', function(){
+  current.setDate(parseInt(this.value));
+  render(current, true);
+  syncJumpInput();
+});
+
+// Populate the day select (1-31) and keep it in sync when month changes
+function populateDays(month, selectedDay){
+  var sel = document.getElementById('jumpDay');
+  var maxDay = new Date(current.getFullYear(), month+1, 0).getDate();
+  sel.innerHTML = '';
+  for (var i=1; i<=maxDay; i++){
+    var opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = i;
+    if (i === selectedDay) opt.selected = true;
+    sel.appendChild(opt);
+  }
+}
+
+syncJumpInput();
+render(current, false);
+</script>
+</body>
+</html>

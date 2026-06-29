@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Access Saint of the Day</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+SC:wght@400;600&family=EB+Garamond:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:#2e2417; --parchment:#f5edd8; --gold:#c8a24a;
+    --gold-light:#e2c97e; --crimson:#8b1a1a; --indigo:#1e2a4a;
+  }
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+  body {
+    font-family:'EB Garamond', serif;
+    background:var(--indigo);
+    color:var(--parchment);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .box { max-width:440px; width:100%; text-align:center; }
+
+  .cross { font-size:32px; color:var(--gold); margin-bottom:24px; }
+
+  h1 {
+    font-family:'Cormorant SC', serif;
+    font-size:26px;
+    margin-bottom:10px;
+  }
+  .subtitle {
+    font-size:15px;
+    color:rgba(245,237,216,0.6);
+    font-style:italic;
+    margin-bottom:32px;
+    line-height:1.6;
+  }
+
+  .input-wrap { position:relative; margin-bottom:12px; }
+  .input-wrap input {
+    width:100%;
+    background:rgba(255,255,255,0.07);
+    border:1px solid rgba(200,162,74,0.35);
+    border-radius:4px;
+    padding:15px 18px;
+    color:var(--parchment);
+    font-family:'Cormorant SC', serif;
+    font-size:17px;
+    letter-spacing:0.12em;
+    text-align:center;
+    text-transform:uppercase;
+    outline:none;
+  }
+  .input-wrap input:focus { border-color:var(--gold); }
+  .input-wrap input::placeholder {
+    color:rgba(245,237,216,0.25);
+    text-transform:none;
+    letter-spacing:0.04em;
+    font-family:'EB Garamond', serif;
+    font-size:15px;
+  }
+
+  .btn {
+    width:100%;
+    background:var(--gold);
+    color:var(--ink);
+    border:none;
+    padding:15px 24px;
+    border-radius:4px;
+    font-family:'Cormorant SC', serif;
+    font-size:17px;
+    letter-spacing:0.08em;
+    cursor:pointer;
+    transition:background 0.2s;
+    margin-bottom:12px;
+  }
+  .btn:hover { background:var(--gold-light); }
+  .btn:disabled { opacity:0.5; cursor:default; }
+
+  .msg {
+    min-height:22px;
+    font-size:14px;
+    font-style:italic;
+    color:rgba(245,237,216,0.55);
+    margin-bottom:20px;
+    line-height:1.5;
+  }
+  .msg.error   { color:#e07070; }
+  .msg.success { color:#90c878; }
+
+  .divider {
+    display:flex;
+    align-items:center;
+    gap:14px;
+    margin:20px 0;
+    color:rgba(200,162,74,0.25);
+    font-size:13px;
+    letter-spacing:0.1em;
+  }
+  .divider::before, .divider::after {
+    content:'';
+    flex:1;
+    height:1px;
+    background:rgba(200,162,74,0.15);
+  }
+
+  .code-toggle {
+    background:none;
+    border:none;
+    color:rgba(245,237,216,0.35);
+    font-family:'EB Garamond', serif;
+    font-size:13px;
+    font-style:italic;
+    cursor:pointer;
+    text-decoration:underline;
+    text-underline-offset:3px;
+    margin-bottom:20px;
+    transition:color 0.2s;
+  }
+  .code-toggle:hover { color:var(--gold); }
+
+  .code-panel {
+    display:none;
+    flex-direction:column;
+    gap:10px;
+    margin-bottom:20px;
+  }
+  .code-panel.open { display:flex; }
+  .code-panel input {
+    background:rgba(255,255,255,0.05);
+    border:1px solid rgba(200,162,74,0.2);
+    border-radius:4px;
+    padding:12px 16px;
+    color:var(--parchment);
+    font-family:'EB Garamond', serif;
+    font-size:15px;
+    text-align:center;
+    outline:none;
+    letter-spacing:0.06em;
+  }
+  .code-panel input:focus { border-color:rgba(200,162,74,0.5); }
+  .code-panel input::placeholder { color:rgba(245,237,216,0.25); }
+  .btn-ghost {
+    background:none;
+    border:1px solid rgba(200,162,74,0.35);
+    color:var(--gold);
+    padding:11px 24px;
+    border-radius:4px;
+    font-family:'Cormorant SC', serif;
+    font-size:14px;
+    letter-spacing:0.08em;
+    cursor:pointer;
+    transition:background 0.2s, color 0.2s;
+  }
+  .btn-ghost:hover { background:var(--gold); color:var(--ink); }
+
+  .state { display:none; }
+  .state.active { display:block; }
+
+  .big-msg {
+    font-size:17px;
+    line-height:1.7;
+    color:rgba(245,237,216,0.7);
+    margin-bottom:24px;
+    font-style:italic;
+  }
+  .key-hint {
+    background:rgba(255,255,255,0.04);
+    border:1px solid rgba(200,162,74,0.15);
+    border-radius:6px;
+    padding:16px 20px;
+    margin-bottom:24px;
+    font-size:14px;
+    color:rgba(245,237,216,0.5);
+    line-height:1.6;
+    text-align:left;
+  }
+  .key-hint strong { color:var(--gold); display:block; margin-bottom:4px; font-family:'Cormorant SC', serif; letter-spacing:0.05em; }
+  .back {
+    display:block;
+    margin-top:24px;
+    font-size:13px;
+    color:rgba(245,237,216,0.3);
+    text-decoration:none;
+    font-style:italic;
+  }
+  .back:hover { color:var(--gold); }
+</style>
+</head>
+<body>
+<div class="box">
+
+  <!-- ── Main form ── -->
+  <div id="stateForm" class="state active">
+    <div class="cross">✠</div>
+    <h1>Open Saint of the Day</h1>
+    <p class="subtitle">
+      Enter the license key from your confirmation email.<br>
+      It looks like <span style="color:var(--gold);font-family:'Cormorant SC',serif;letter-spacing:0.08em;">XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX</span>
+    </p>
+
+    <div class="input-wrap">
+      <input type="text" id="keyInput"
+             placeholder="Paste your license key here"
+             autocomplete="off" autocorrect="off"
+             autocapitalize="characters" spellcheck="false">
+    </div>
+
+    <button class="btn" id="keyBtn" onclick="submitKey()">Open the app ✠</button>
+    <div class="msg" id="keyMsg"></div>
+
+    <div class="key-hint">
+      <strong>Where is my key?</strong>
+      Check the email from Lemon Squeezy sent after you subscribed.
+      The subject line is "Your Saint of the Day license key."
+      If you can't find it, check your spam folder.
+    </div>
+
+    <div class="divider">· or ·</div>
+
+    <button class="code-toggle" id="codeToggle" onclick="toggleCode()">
+      I have a free access code
+    </button>
+
+    <div class="code-panel" id="codePanel">
+      <input type="text" id="codeInput" placeholder="Enter access code"
+             autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <button class="btn-ghost" onclick="submitCode()">Apply code</button>
+      <div class="msg" id="codeMsg"></div>
+    </div>
+
+    <a class="back" href="/">← No subscription yet? Start your free 7 days</a>
+  </div>
+
+  <!-- ── Loading ── -->
+  <div id="stateLoading" class="state">
+    <div class="cross">✠</div>
+    <h1>Opening…</h1>
+    <p class="subtitle">Just a moment.</p>
+  </div>
+
+  <!-- ── Invalid key ── -->
+  <div id="stateInvalid" class="state">
+    <div class="cross">✠</div>
+    <h1>Key not recognised</h1>
+    <p class="big-msg">
+      That license key doesn't appear to be active.<br>
+      This can happen if your subscription has been cancelled or the key was entered incorrectly.
+    </p>
+    <div class="key-hint">
+      <strong>Try these first</strong>
+      · Check for extra spaces before or after the key<br>
+      · Make sure you copied the full key from your email<br>
+      · If you cancelled and resubscribed, use the new key from the latest email
+    </div>
+    <button class="btn-ghost" onclick="showState('stateForm')">Try again</button>
+    <br>
+    <a class="back" href="https://bjassist.lemonsqueezy.com/checkout/buy/6c561734-51ad-4b23-bdc4-514c7da16fee">Subscribe to get a key →</a>
+  </div>
+
+</div>
+
+<script>
+function showState(id){
+  document.querySelectorAll('.state').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function toggleCode(){
+  const panel  = document.getElementById('codePanel');
+  const toggle = document.getElementById('codeToggle');
+  const open   = panel.classList.toggle('open');
+  toggle.textContent = open ? 'Hide access code field' : 'I have a free access code';
+}
+
+async function submitKey(){
+  const key = document.getElementById('keyInput').value.trim();
+  const msg = document.getElementById('keyMsg');
+  const btn = document.getElementById('keyBtn');
+
+  if (key.length < 10){
+    msg.textContent = 'Please paste your full license key.';
+    msg.className = 'msg error'; return;
+  }
+
+  btn.disabled = true;
+  msg.textContent = 'Validating your key…'; msg.className = 'msg';
+
+  try {
+    const res  = await fetch('/api/check-subscription', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ key })
+    });
+    const data = await res.json();
+
+    if (data.active){
+      sessionStorage.setItem('sotd_token', data.token);
+      showState('stateLoading');
+      setTimeout(() => { window.location.href = '/app.html'; }, 700);
+    } else {
+      showState('stateInvalid');
+    }
+  } catch(e){
+    msg.textContent = 'Connection problem — please try again.';
+    msg.className = 'msg error';
+    btn.disabled = false;
+  }
+}
+
+async function submitCode(){
+  const code = document.getElementById('codeInput').value.trim();
+  const msg  = document.getElementById('codeMsg');
+
+  if (!code){ msg.textContent = 'Please enter your code.'; msg.className = 'msg error'; return; }
+
+  msg.textContent = 'Checking…'; msg.className = 'msg';
+
+  try {
+    const res  = await fetch('/api/check-subscription', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ code })
+    });
+    const data = await res.json();
+
+    if (data.active){
+      sessionStorage.setItem('sotd_token', data.token);
+      showState('stateLoading');
+      setTimeout(() => { window.location.href = '/app.html'; }, 700);
+    } else {
+      msg.textContent = 'That code wasn\'t recognised. Check the spelling and try again.';
+      msg.className = 'msg error';
+    }
+  } catch(e){
+    msg.textContent = 'Connection problem — please try again.';
+    msg.className = 'msg error';
+  }
+}
+
+document.getElementById('keyInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitKey();
+});
+document.getElementById('codeInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitCode();
+});
+</script>
+</body>
+</html>
