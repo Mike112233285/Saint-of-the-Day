@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Access Saint of the Day</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1e2a4a">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+SC:wght@400;600&family=EB+Garamond:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
 <style>
@@ -250,6 +252,10 @@ async function submitCode(){
 
 document.getElementById('keyInput').addEventListener('keydown',  e=>{ if(e.key==='Enter') submitKey(); });
 document.getElementById('codeInput').addEventListener('keydown', e=>{ if(e.key==='Enter') submitCode(); });
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
 </script>
 </body>
 </html>
