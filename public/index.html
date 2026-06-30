@@ -562,6 +562,10 @@ const LS_URL = 'https://bjassist.lemonsqueezy.com/checkout/buy/6c561734-51ad-4b2
 document.getElementById('navCta').href = LS_URL;
 document.getElementById('heroCta').href = LS_URL;
 document.getElementById('pricingCta').href = LS_URL;
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
 </script>
 </body>
 </html>
