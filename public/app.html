@@ -1019,24 +1019,20 @@ async function translateEntry(lang, key, entry){
   if (!translationCache[lang]) translationCache[lang] = {};
   if (translationCache[lang][key]) return translationCache[lang][key];
 
-  var langName = LANGS[lang].label;
   try {
-    var res = await fetch('https://api.anthropic.com/v1/messages', {
+    var res = await fetch('/api/translate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
-        system: 'You are a translator specialising in Catholic and Christian religious texts. Translate accurately, preserving religious tone and warmth. Return ONLY a valid JSON object — no preamble, no markdown.',
-        messages: [{
-          role: 'user',
-          content: 'Translate these three fields into ' + langName + '. Keep saint names, place names, and proper nouns unchanged. Return JSON with keys "title", "text", "bio".\n\ntitle: ' + (entry.title||'') + '\ntext: ' + entry.text + '\nbio: ' + (entry.bio||'')
-        }]
+        lang: lang,
+        title: entry.title || '',
+        text: entry.text,
+        bio: entry.bio || ''
       })
     });
-    var data = await res.json();
-    var raw = data.content[0].text.replace(/```json|```/g,'').trim();
-    var translated = JSON.parse(raw);
+    if (!res.ok) throw new Error('API error');
+    var translated = await res.json();
+    if (translated.error) throw new Error(translated.error);
     translationCache[lang][key] = translated;
     return translated;
   } catch(e) {
