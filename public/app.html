@@ -1009,10 +1009,78 @@ function withSaintPrefix(name){
   return 'Saint ' + name;
 }
 
+// ── AI Translation cache ───────────────────────────────────────────────────
+// Keyed by lang → MM-DD → { title, text, bio }
+// English never hits the API. Other languages translate on first view and cache.
+var translationCache = {};
+
+async function translateEntry(lang, key, entry){
+  if (lang === 'en') return null;
+  if (!translationCache[lang]) translationCache[lang] = {};
+  if (translationCache[lang][key]) return translationCache[lang][key];
+
+  var langName = LANGS[lang].label;
+  try {
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        system: 'You are a translator specialising in Catholic and Christian religious texts. Translate accurately, preserving religious tone and warmth. Return ONLY a valid JSON object — no preamble, no markdown.',
+        messages: [{
+          role: 'user',
+          content: 'Translate these three fields into ' + langName + '. Keep saint names, place names, and proper nouns unchanged. Return JSON with keys "title", "text", "bio".\n\ntitle: ' + (entry.title||'') + '\ntext: ' + entry.text + '\nbio: ' + (entry.bio||'')
+        }]
+      })
+    });
+    var data = await res.json();
+    var raw = data.content[0].text.replace(/```json|```/g,'').trim();
+    var translated = JSON.parse(raw);
+    translationCache[lang][key] = translated;
+    return translated;
+  } catch(e) {
+    return null; // Fall back to English silently
+  }
+}
+// ──────────────────────────────────────────────────────────────────────────
+
 // Generation counter — each render() call gets a unique ID.
 // Portrait fetches check this before writing to DOM so a slow network response
 // for a previous day cannot overwrite current day content.
 let renderGen = 0;
+
+function applyEntryContent(entry, translated, key){
+  var displayName = withSaintPrefixLocale(entry.name);
+  var title  = (translated && translated.title) || entry.title || '';
+  var text   = (translated && translated.text)  || entry.text;
+  var bio    = (translated && translated.bio)   || entry.bio || '';
+
+  document.getElementById('saintName').textContent  = displayName;
+  document.getElementById('saintTitle').textContent = title;
+  document.getElementById('saintBorn').textContent  = entry.born ? t().born + ' ' + entry.born : '';
+
+  var companionHtml = entry.companions
+    ? '<p class="companion-note">' + entry.companions + '</p>' : '';
+
+  var quoteBlock = document.getElementById('quoteBlock');
+  var bioBlock   = document.getElementById('bioBlock');
+
+  if (entry.type === 'quote') {
+    quoteBlock.innerHTML =
+      '<span class="quote-mark">\u201c</span>' +
+      '<p class="quote-text">' + text + '</p>' +
+      '<p class="attribution">\u2014 ' + displayName + '</p>' +
+      (entry.source ? '<p class="source-note">' + entry.source + '</p>' : '') +
+      companionHtml;
+  } else {
+    quoteBlock.innerHTML =
+      '<p class="reflection-text">' + text + '</p>' +
+      '<p class="attribution">' + t().rememberedToday + '</p>' +
+      companionHtml;
+  }
+  bioBlock.innerHTML = bio ? '<p class="bio-text">' + bio + '</p>' : '';
+}
 
 function renderSync(date){
   const key = keyFor(date);
@@ -1021,38 +1089,27 @@ function renderSync(date){
   document.getElementById('weekday').textContent = weekdayFmt.format(date);
   document.getElementById('bigDate').textContent = monthDayFmt.format(date);
 
-  const nameEl     = document.getElementById('saintName');
-  const titleEl    = document.getElementById('saintTitle');
-  const bornEl     = document.getElementById('saintBorn');
-  const quoteBlock = document.getElementById('quoteBlock');
-  const bioBlock   = document.getElementById('bioBlock');
-  const medallion  = document.getElementById('medallion');
+  const medallion = document.getElementById('medallion');
 
   if (entry) {
-    var displayName = withSaintPrefixLocale(entry.name);
-    nameEl.textContent  = displayName;
-    titleEl.textContent = entry.title || '';
-    bornEl.textContent  = entry.born ? t().born + ' ' + entry.born : '';
+    // Show English immediately, then replace with translation if needed
+    applyEntryContent(entry, null, key);
 
-    var companionHtml = entry.companions
-      ? '<p class="companion-note">' + entry.companions + '</p>' : '';
-
-    if (entry.type === 'quote') {
-      quoteBlock.innerHTML =
-        '<span class="quote-mark">\u201c</span>' +
-        '<p class="quote-text">' + entry.text + '</p>' +
-        '<p class="attribution">\u2014 ' + displayName + '</p>' +
-        (entry.source ? '<p class="source-note">' + entry.source + '</p>' : '') +
-        companionHtml;
-    } else {
-      quoteBlock.innerHTML =
-        '<p class="reflection-text">' + entry.text + '</p>' +
-        '<p class="attribution">' + t().rememberedToday + '</p>' +
-        companionHtml;
+    // Async translation for non-English
+    if (currentLang !== 'en') {
+      // Show subtle loading indicator on bio while translating
+      var bioBlock = document.getElementById('bioBlock');
+      if (entry.bio && !translationCache[currentLang]?.[key]) {
+        bioBlock.innerHTML = '<p class="bio-text" style="opacity:0.4;font-style:italic">' + entry.bio + '</p>';
+      }
+      var myLang = currentLang;
+      translateEntry(currentLang, key, entry).then(function(translated){
+        // Only apply if user hasn't switched day or language
+        if (keyFor(current) === key && currentLang === myLang) {
+          applyEntryContent(entry, translated, key);
+        }
+      });
     }
-
-    bioBlock.innerHTML = entry.bio
-      ? '<p class="bio-text">' + entry.bio + '</p>' : '';
 
     medallion.innerHTML =
       '<span class="fallback-initial">' + entry.name.charAt(0) + '</span>';
@@ -1063,7 +1120,7 @@ function renderSync(date){
         if (renderGen !== myGen) return;
         if (url) {
           document.getElementById('medallion').innerHTML =
-            '<img src="' + url + '" alt="Portrait of ' + displayName + '">';
+            '<img src="' + url + '" alt="Portrait of ' + withSaintPrefixLocale(entry.name) + '">';
         }
       });
     }
