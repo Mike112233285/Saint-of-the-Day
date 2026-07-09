@@ -1048,9 +1048,9 @@ let renderGen = 0;
 
 function applyEntryContent(entry, translated, key){
   var displayName = withSaintPrefixLocale(entry.name);
-  var title  = (translated && translated.title) || entry.title || '';
-  var text   = (translated && translated.text)  || entry.text;
-  var bio    = (translated && translated.bio)   || entry.bio || '';
+  var title  = translated ? (translated.title !== undefined ? translated.title : entry.title || '') : (entry.title || '');
+  var text   = translated ? (translated.text  || entry.text) : entry.text;
+  var bio    = translated ? (translated.bio   || entry.bio  || '') : (entry.bio || '');
 
   document.getElementById('saintName').textContent  = displayName;
   document.getElementById('saintTitle').textContent = title;

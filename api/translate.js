@@ -83,7 +83,7 @@ const TITLE_MAP = {
   },
 };
 
-function translateTitle(title, lang) {
+async function translateTitle(title, lang, targetLang) {
   if (!title || lang === 'en') return title;
   var map = TITLE_MAP[lang] || {};
   // Try exact match first
@@ -91,9 +91,14 @@ function translateTitle(title, lang) {
   // Try replacing known terms within the title
   var result = title;
   Object.entries(map).forEach(function([en, tr]) {
-    result = result.replace(new RegExp('\\b' + en + '\\b', 'gi'), tr);
+    result = result.replace(new RegExp('\\b' + en.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi'), tr);
   });
-  return result;
+  // If we changed something, return the result
+  if (result !== title) return result;
+  // Otherwise fall back to MyMemory translation
+  return await translateText('Catholic religious title: ' + title, targetLang)
+    .then(function(t){ return t.replace(/^Catholic religious title:\s*/i, '').trim(); })
+    .catch(function(){ return title; });
 }
 
 async function translateText(text, targetLang) {
@@ -120,13 +125,14 @@ module.exports = async function handler(req, res) {
   const targetLang = LANG_CODES[lang];
 
   try {
-    const [translatedText, translatedBio] = await Promise.all([
+    const [translatedTitle, translatedText, translatedBio] = await Promise.all([
+      translateTitle(title, lang, targetLang),
       translateText(text, targetLang),
       translateText(bio || '', targetLang),
     ]);
 
     return res.status(200).json({
-      title: translateTitle(title, lang),
+      title: translatedTitle,
       text: translatedText,
       bio: translatedBio,
     });
