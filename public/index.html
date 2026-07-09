@@ -425,17 +425,44 @@
 
 <div class="divider">· · ·</div>
 
-<!-- CARD PREVIEW -->
+<!-- FIXED PREVIEW CARD — always November 1st, All Saints -->
 <section class="preview-section">
-  <div class="card-preview" id="previewCard">
-    <p class="preview-eyebrow" id="previewWeekday">Thursday</p>
-    <h2 class="preview-date" id="previewDate">Jun 19</h2>
-    <div class="preview-medallion" id="previewMedallion">R</div>
-    <h3 class="preview-name" id="previewName">Saint Romuald</h3>
-    <p class="preview-title" id="previewTitle">Abbot</p>
-    <p class="preview-born" id="previewBorn">Born c. 951</p>
-    <p class="preview-quote" id="previewQuote">"An Italian nobleman who founded the Camaldolese, combining solitude with community — a hermit order still flourishing today."</p>
-    <div class="preview-lock">🔒 Subscribe to unlock all 365 days</div>
+  <div style="position:relative;width:320px;">
+    <div class="card-preview">
+      <p class="preview-eyebrow">Friday</p>
+      <h2 class="preview-date">Nov 1</h2>
+      <div class="preview-medallion">A</div>
+      <h3 class="preview-name">All Saints</h3>
+      <p class="preview-title">Solemnity</p>
+      <p class="preview-born"></p>
+      <p class="preview-quote">"Blessed are the pure in heart, for they shall see God."</p>
+
+      <!-- Subscription overlay -->
+      <div style="
+        position:absolute;
+        inset:0;
+        border-radius:6px;
+        background:linear-gradient(to bottom, rgba(30,42,74,0) 40%, rgba(30,42,74,0.97) 75%);
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        justify-content:flex-end;
+        padding:24px 20px 28px;
+        text-align:center;
+      ">
+        <p style="font-family:'Cormorant SC',serif;font-size:13px;letter-spacing:0.1em;color:var(--gold);margin-bottom:10px;">
+          ✠ &nbsp; 365 DAYS OF SAINTS &nbsp; ✠
+        </p>
+        <p style="font-family:'EB Garamond',serif;font-size:15px;color:rgba(245,237,216,0.85);margin-bottom:18px;font-style:italic;line-height:1.5;">
+          Subscribe to open every saint, feast, and holy day of the year.
+        </p>
+        <a href="https://bjassist.lemonsqueezy.com/checkout/buy/6c561734-51ad-4b23-bdc4-514c7da16fee"
+           style="background:var(--gold);color:var(--ink);font-family:'Cormorant SC',serif;font-size:15px;letter-spacing:0.08em;padding:12px 28px;border-radius:3px;text-decoration:none;display:inline-block;margin-bottom:10px;">
+          Try free for 7 days
+        </a>
+        <p style="font-size:12px;color:rgba(245,237,216,0.4);font-style:italic;">Then €1 / month · Cancel any time</p>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -512,49 +539,9 @@
 </footer>
 
 <script>
-// Show today's saint in the preview card
-const PREVIEW_SAINTS = {
-  "01-01":{name:"Mary, Mother of God",title:"Solemnity",born:null,text:"The Church's oldest Marian feast, opening the new year with a prayer for peace.",initial:"M"},
-  "01-17":{name:"Saint Anthony, Abbot",title:"Father of Monasticism",born:"c. 251",text:"I no longer fear God — I love Him.",initial:"A"},
-  "02-14":{name:"Saints Cyril and Methodius",title:"Apostles to the Slavs",born:"827 (Cyril)",text:"Devised a Slavic alphabet to bring the Gospel to peoples who had no written language.",initial:"C"},
-  "03-17":{name:"Saint Patrick",title:"Bishop",born:"c. 385",text:"Patron of Ireland, enslaved in his youth, who returned as a missionary bishop.",initial:"P"},
-  "04-23":{name:"Saint George",title:"Martyr",born:"c. 280",text:"A Roman soldier who died for his faith — the dragon-slaying came centuries later.",initial:"G"},
-  "05-15":{name:"Saint Isidore the Farmer",title:"Layman",born:"c. 1070",text:"A farm labourer whose angels reportedly finished his ploughing when prayer made him late.",initial:"I"},
-  "06-13":{name:"Saint Anthony of Padua",title:"Priest and Doctor",born:"1195",text:"If you seek miracles, look where mercy, love, and piety have been.",initial:"A"},
-  "06-19":{name:"Saint Romuald",title:"Abbot",born:"c. 951",text:"An Italian nobleman who founded the Camaldolese, combining solitude with community.",initial:"R"},
-  "07-25":{name:"Saint James",title:"Apostle",born:"1st century",text:"The first apostle to be martyred — his shrine at Santiago de Compostela drew pilgrims from across medieval Europe.",initial:"J"},
-  "08-15":{name:"The Assumption of the Blessed Virgin Mary",title:"Solemnity",born:null,text:"My soul magnifies the Lord, and my spirit rejoices in God my Savior.",initial:"M"},
-  "09-29":{name:"Saints Michael, Gabriel and Raphael",title:"Archangels",born:null,text:"The three named angels of Scripture — warrior, messenger, and healer.",initial:"M"},
-  "10-04":{name:"Saint Francis of Assisi",title:"Founder of the Franciscans",born:"1181",text:"A wealthy merchant's son who renounced everything to live in poverty and joy.",initial:"F"},
-  "11-01":{name:"All Saints",title:"Solemnity",born:null,text:"Blessed are the pure in heart, for they shall see God.",initial:"A"},
-  "11-11":{name:"Saint Martin of Tours",title:"Bishop",born:"c. 316",text:"A soldier who cut his cloak in half for a beggar — and dreamed that night the beggar was Christ.",initial:"M"},
-  "12-25":{name:"The Nativity of the Lord",title:"Solemnity",born:null,text:"The Word became flesh and made his dwelling among us.",initial:"N"},
-  "12-26":{name:"Saint Stephen",title:"First Martyr",born:"1st century",text:"Christianity's first martyr — he forgave his killers as he died.",initial:"S"},
-};
-
-function todayKey(){
-  const d = new Date();
-  return String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
 }
-function todayFallback(){
-  return {name:"Saint of the Day",title:"Daily Devotional",born:null,
-    text:"Open each morning to discover who the Church remembers today.",initial:"✠"};
-}
-
-const key = todayKey();
-const entry = PREVIEW_SAINTS[key] || todayFallback();
-
-const wdFmt = new Intl.DateTimeFormat('en-US',{weekday:'long'});
-const dtFmt = new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric'});
-const now = new Date();
-
-document.getElementById('previewWeekday').textContent = wdFmt.format(now);
-document.getElementById('previewDate').textContent = dtFmt.format(now);
-document.getElementById('previewMedallion').textContent = entry.initial;
-document.getElementById('previewName').textContent = entry.name;
-document.getElementById('previewTitle').textContent = entry.title;
-document.getElementById('previewBorn').textContent = entry.born ? 'Born ' + entry.born : '';
-document.getElementById('previewQuote').textContent = '\u201c' + entry.text + '\u201d';
 
 // ── Replace https://bjassist.lemonsqueezy.com/checkout/buy/6c561734-51ad-4b23-bdc4-514c7da16fee with your actual Lemon Squeezy checkout link ──
 // (see README for how to get this)
