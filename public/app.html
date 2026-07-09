@@ -366,6 +366,31 @@
     color:var(--ink);
     cursor:pointer;
   }
+  .lang-row{
+    display:flex;
+    justify-content:center;
+    gap:6px;
+    margin-top:12px;
+    flex-wrap:wrap;
+  }
+  .lang-btn{
+    background:rgba(255,255,255,0.06);
+    border:1px solid rgba(200,162,74,0.2);
+    border-radius:4px;
+    padding:4px 10px;
+    font-family:'Cormorant SC', serif;
+    font-size:12px;
+    letter-spacing:0.06em;
+    color:rgba(245,237,216,0.4);
+    cursor:pointer;
+    transition:all 0.2s;
+  }
+  .lang-btn:hover{ color:var(--gold); border-color:rgba(200,162,74,0.5); }
+  .lang-btn.active{
+    color:var(--gold);
+    border-color:var(--gold);
+    background:rgba(200,162,74,0.1);
+  }
   @media (max-width:380px){
     .card{ padding:28px 20px 22px; }
     .big-date{ font-size:36px; }
@@ -423,6 +448,18 @@
         <!-- Days 1-31 filled by JS on load -->
       </select>
     </div>
+  </div>
+
+  <div class="lang-row">
+    <button class="lang-btn active" data-lang="en">EN</button>
+    <button class="lang-btn" data-lang="nl">NL</button>
+    <button class="lang-btn" data-lang="es">ES</button>
+    <button class="lang-btn" data-lang="it">IT</button>
+    <button class="lang-btn" data-lang="fr">FR</button>
+    <button class="lang-btn" data-lang="pt">PT</button>
+    <button class="lang-btn" data-lang="pl">PL</button>
+    <button class="lang-btn" data-lang="ru">RU</button>
+    <button class="lang-btn" data-lang="el">EL</button>
   </div>
 </div>
 
@@ -806,13 +843,120 @@ const SAINTS = {
   "12-30": { name:"Anysia of Thessalonica", title:"Martyr", type:"reflection", text:"A young noblewoman of Thessalonica martyred around 304 who, when stopped by a Roman soldier demanding to know if she was Christian, gave him her answer — and was killed on the spot.", wiki:"Anysia_of_Thessalonica", bio:"She gave away her inherited wealth to the poor before her martyrdom and is venerated in both Eastern and Western martyrologies." },
 };
 
+// ── Language / i18n ──────────────────────────────────────────────────────────
+const LANGS = {
+  en: { label:'English',    locale:'en-US', appLabel:'✠ Saint of the Day ✠',
+        born:'Born', rememberedToday:'— remembered today',
+        todayBtn:'Today', jumpLabel:'Jump to a date',
+        prevBtn:'‹ Prev', nextBtn:'Next ›',
+        saintPrefix:'Saint', saintsPrefix:'Saints' },
+  nl: { label:'Nederlands', locale:'nl-NL', appLabel:'✠ Heilige van de Dag ✠',
+        born:'Geboren', rememberedToday:'— herdacht vandaag',
+        todayBtn:'Vandaag', jumpLabel:'Ga naar een datum',
+        prevBtn:'‹ Vorige', nextBtn:'Volgende ›',
+        saintPrefix:'Sint', saintsPrefix:'Heiligen' },
+  es: { label:'Español',    locale:'es-ES', appLabel:'✠ Santo del Día ✠',
+        born:'Nacido', rememberedToday:'— recordado hoy',
+        todayBtn:'Hoy', jumpLabel:'Ir a una fecha',
+        prevBtn:'‹ Anterior', nextBtn:'Siguiente ›',
+        saintPrefix:'San', saintsPrefix:'Santos' },
+  it: { label:'Italiano',   locale:'it-IT', appLabel:'✠ Santo del Giorno ✠',
+        born:'Nato', rememberedToday:'— commemorato oggi',
+        todayBtn:'Oggi', jumpLabel:'Vai a una data',
+        prevBtn:'‹ Indietro', nextBtn:'Avanti ›',
+        saintPrefix:'San', saintsPrefix:'Santi' },
+  fr: { label:'Français',   locale:'fr-FR', appLabel:'✠ Saint du Jour ✠',
+        born:'Né', rememberedToday:'— commémoré aujourd\'hui',
+        todayBtn:'Aujourd\'hui', jumpLabel:'Aller à une date',
+        prevBtn:'‹ Précédent', nextBtn:'Suivant ›',
+        saintPrefix:'Saint', saintsPrefix:'Saints' },
+  pt: { label:'Português',  locale:'pt-BR', appLabel:'✠ Santo do Dia ✠',
+        born:'Nascido', rememberedToday:'— lembrado hoje',
+        todayBtn:'Hoje', jumpLabel:'Ir para uma data',
+        prevBtn:'‹ Anterior', nextBtn:'Próximo ›',
+        saintPrefix:'São', saintsPrefix:'Santos' },
+  pl: { label:'Polski',     locale:'pl-PL', appLabel:'✠ Święty Dnia ✠',
+        born:'Urodzony', rememberedToday:'— wspominany dzisiaj',
+        todayBtn:'Dziś', jumpLabel:'Przejdź do daty',
+        prevBtn:'‹ Poprzedni', nextBtn:'Następny ›',
+        saintPrefix:'Święty', saintsPrefix:'Święci' },
+  ru: { label:'Русский',    locale:'ru-RU', appLabel:'✠ Святой дня ✠',
+        born:'Родился', rememberedToday:'— вспоминается сегодня',
+        todayBtn:'Сегодня', jumpLabel:'Перейти к дате',
+        prevBtn:'‹ Назад', nextBtn:'Вперёд ›',
+        saintPrefix:'Святой', saintsPrefix:'Святые' },
+  el: { label:'Ελληνικά',   locale:'el-GR', appLabel:'✠ Άγιος της Ημέρας ✠',
+        born:'Γεννήθηκε', rememberedToday:'— τιμάται σήμερα',
+        todayBtn:'Σήμερα', jumpLabel:'Μετάβαση σε ημερομηνία',
+        prevBtn:'‹ Προηγ.', nextBtn:'Επόμ. ›',
+        saintPrefix:'Άγιος', saintsPrefix:'Άγιοι' },
+};
+
+const SUPPORTED = Object.keys(LANGS);
+
+function detectLang(){
+  var saved = localStorage.getItem('sotd_lang');
+  if (saved && LANGS[saved]) return saved;
+  var nav = (navigator.language || 'en').slice(0,2).toLowerCase();
+  return LANGS[nav] ? nav : 'en';
+}
+
+var currentLang = detectLang();
+
+function t(){ return LANGS[currentLang]; }
+
+function applyLang(){
+  var tr = t();
+  // Date formatters — recreated with new locale
+  weekdayFmt = new Intl.DateTimeFormat(tr.locale, { weekday:'long' });
+  monthDayFmt = new Intl.DateTimeFormat(tr.locale, { month:'short', day:'numeric' });
+  // Populate month select with translated names
+  var monthSel = document.getElementById('jumpMonth');
+  var monthFmt = new Intl.DateTimeFormat(tr.locale, { month:'long' });
+  for (var i=0; i<12; i++){
+    var d = new Date(2000, i, 1);
+    monthSel.options[i].textContent = monthFmt.format(d);
+  }
+  // UI labels
+  document.querySelector('.app-label').textContent = tr.appLabel;
+  document.getElementById('todayBtn').textContent  = tr.todayBtn;
+  document.getElementById('prevBtn').textContent   = tr.prevBtn;
+  document.getElementById('nextBtn').textContent   = tr.nextBtn;
+  document.querySelector('.jump-row label').textContent = tr.jumpLabel;
+  // Highlight active language in selector
+  document.querySelectorAll('.lang-btn').forEach(function(btn){
+    btn.classList.toggle('active', btn.dataset.lang === currentLang);
+  });
+}
+
+function setLang(lang){
+  if (!LANGS[lang]) return;
+  currentLang = lang;
+  localStorage.setItem('sotd_lang', lang);
+  applyLang();
+  renderSync(current);
+}
+
+// Override withSaintPrefix to use current language
+function withSaintPrefixLocale(name){
+  var tr = t();
+  if (/^(The |Our Lady|All Saints$|All Souls$|All Hallows|Beginning of|Christmas Eve)/.test(name)) return name;
+  if (/^(Seven Founders|Seven Brothers|Four Crowned)/.test(name)) return name;
+  if (/^Sts /.test(name)) return tr.saintsPrefix + ' ' + name.slice(4);
+  if (/ and Companions/.test(name)) return tr.saintPrefix + ' ' + name;
+  if (/ and | & /.test(name)) return tr.saintsPrefix + ' ' + name;
+  return tr.saintPrefix + ' ' + name;
+}
+
+// ── End language system ───────────────────────────────────────────────────────
+
 const FALLBACK = {
   title:"Known only to God",
   text:"This day's saint hasn't been added to the calendar yet. The roll call of holiness is far larger than any list — countless faithful lives are remembered by God alone."
 };
 
-const weekdayFmt = new Intl.DateTimeFormat('en-US', { weekday:'long' });
-const monthDayFmt = new Intl.DateTimeFormat('en-US', { month:'short', day:'numeric' });
+let weekdayFmt = new Intl.DateTimeFormat('en-US', { weekday:'long' });
+let monthDayFmt = new Intl.DateTimeFormat('en-US', { month:'short', day:'numeric' });
 
 let current = new Date();
 current.setHours(0,0,0,0);
@@ -885,10 +1029,10 @@ function renderSync(date){
   const medallion  = document.getElementById('medallion');
 
   if (entry) {
-    var displayName = withSaintPrefix(entry.name);
+    var displayName = withSaintPrefixLocale(entry.name);
     nameEl.textContent  = displayName;
     titleEl.textContent = entry.title || '';
-    bornEl.textContent  = entry.born ? 'Born ' + entry.born : '';
+    bornEl.textContent  = entry.born ? t().born + ' ' + entry.born : '';
 
     var companionHtml = entry.companions
       ? '<p class="companion-note">' + entry.companions + '</p>' : '';
@@ -903,7 +1047,7 @@ function renderSync(date){
     } else {
       quoteBlock.innerHTML =
         '<p class="reflection-text">' + entry.text + '</p>' +
-        '<p class="attribution">\u2014 remembered today</p>' +
+        '<p class="attribution">' + t().rememberedToday + '</p>' +
         companionHtml;
     }
 
@@ -976,6 +1120,11 @@ document.getElementById('jumpDay').addEventListener('change', function(){
   syncJumpInput();
 });
 
+// Wire up language buttons
+document.querySelectorAll('.lang-btn').forEach(function(btn){
+  btn.addEventListener('click', function(){ setLang(this.dataset.lang); });
+});
+
 // Populate the day select (1-31) and keep it in sync when month changes
 function populateDays(month, selectedDay){
   var sel = document.getElementById('jumpDay');
@@ -990,6 +1139,7 @@ function populateDays(month, selectedDay){
   }
 }
 
+applyLang();
 syncJumpInput();
 render(current, false);
 
